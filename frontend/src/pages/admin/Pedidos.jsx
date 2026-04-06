@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '../../components/admin/Sidebar';
-import { getPedidosAdmin, getDetallePedido, cambiarEstado } from '../../api/pedidosApi';
+import { getPedidosAdmin, getDetallePedido, cambiarEstado, editarPedido } from '../../api/pedidosApi';
 import { registrarPedido } from '../../api/pedidosApi';
 import { getProductosAdmin } from '../../api/productosApi';
 import { getClientes } from '../../api/clientesApi';
@@ -15,10 +15,10 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
   const [busqueda, setBusqueda] = useState('');
   const [clientesFiltrados, setClientesFiltrados] = useState([]);
   const [form, setForm] = useState({ nombre_cliente: '', telefono: '', notas: '' });
-  const [items, setItems] = useState([]); // [{id, nombre, precio, cantidad}]
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [tab, setTab] = useState('manual'); // 'manual' | 'buscar'
+  const [tab, setTab] = useState('manual');
 
   useEffect(() => {
     getProductosAdmin().then(({ data }) => setProductos(data.filter(p => p.stock > 0)));
@@ -84,24 +84,17 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
           <h3 style={modal.titulo}>🛒 Nuevo Pedido</h3>
           <button style={modal.btnCerrar} onClick={onCerrar}>✕</button>
         </div>
-
         <form onSubmit={handleSubmit} style={modal.body}>
-          {/* Datos del cliente */}
           <div style={modal.seccion}>
             <p style={modal.seccionTitulo}>👤 Cliente</p>
             <div style={modal.tabs}>
               <button type="button" style={{ ...modal.tab, ...(tab === 'manual' ? modal.tabActivo : {}) }} onClick={() => setTab('manual')}>Manual</button>
               <button type="button" style={{ ...modal.tab, ...(tab === 'buscar' ? modal.tabActivo : {}) }} onClick={() => setTab('buscar')}>Buscar existente</button>
             </div>
-
             {tab === 'buscar' && (
               <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
-                <input
-                  style={modal.input}
-                  placeholder="Buscar por nombre o teléfono..."
-                  value={busqueda}
-                  onChange={(e) => buscarCliente(e.target.value)}
-                />
+                <input style={modal.input} placeholder="Buscar por nombre o teléfono..."
+                  value={busqueda} onChange={(e) => buscarCliente(e.target.value)} />
                 {clientesFiltrados.length > 0 && (
                   <div style={modal.dropdown}>
                     {clientesFiltrados.map(c => (
@@ -113,7 +106,6 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
                 )}
               </div>
             )}
-
             <div style={modal.grid2}>
               <div>
                 <label style={modal.label}>Nombre *</label>
@@ -136,7 +128,6 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
             </div>
           </div>
 
-          {/* Selector de productos */}
           <div style={modal.seccion}>
             <p style={modal.seccionTitulo}>🍬 Productos</p>
             <div style={modal.productosGrid}>
@@ -152,7 +143,6 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
             </div>
           </div>
 
-          {/* Items seleccionados */}
           {items.length > 0 && (
             <div style={modal.seccion}>
               <p style={modal.seccionTitulo}>📋 Resumen</p>
@@ -179,11 +169,77 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
           )}
 
           {error && <p style={modal.error}>{error}</p>}
-
           <div style={modal.acciones}>
             <button type="button" style={modal.btnSecundario} onClick={onCerrar}>Cancelar</button>
             <button type="submit" style={modal.btnPrimario} disabled={loading}>
               {loading ? 'Creando...' : '✅ Crear pedido'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Modal Editar Pedido ─────────────────────────────────────────────
+function ModalEditarPedido({ pedido, onCerrar, onGuardado }) {
+  const [form, setForm] = useState({
+    nombre_cliente: pedido.nombreCliente,
+    telefono: pedido.telefono,
+    notas: pedido.notas || ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      await editarPedido(pedido.id, form);
+      onGuardado();
+      onCerrar();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error al editar pedido');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={modal.overlay}>
+      <div style={{ ...modal.container, maxWidth: '480px' }}>
+        <div style={modal.header}>
+          <h3 style={modal.titulo}>✏️ Editar Pedido #{pedido.id}</h3>
+          <button style={modal.btnCerrar} onClick={onCerrar}>✕</button>
+        </div>
+        <form onSubmit={handleSubmit} style={modal.body}>
+          <div>
+            <label style={modal.label}>Nombre cliente *</label>
+            <input style={modal.input} value={form.nombre_cliente}
+              onChange={(e) => setForm({ ...form, nombre_cliente: e.target.value })}
+              required />
+          </div>
+          <div>
+            <label style={modal.label}>Teléfono *</label>
+            <input style={modal.input} value={form.telefono}
+              onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+              required />
+          </div>
+          <div>
+            <label style={modal.label}>Notas</label>
+            <textarea
+              style={{ ...modal.input, resize: 'vertical', minHeight: '80px' }}
+              value={form.notas}
+              onChange={(e) => setForm({ ...form, notas: e.target.value })}
+              placeholder="Dirección, aclaraciones..."
+            />
+          </div>
+          {error && <p style={{ color: '#ef4444', fontSize: '0.875rem' }}>{error}</p>}
+          <div style={modal.acciones}>
+            <button type="button" style={modal.btnSecundario} onClick={onCerrar}>Cancelar</button>
+            <button type="submit" style={modal.btnPrimario} disabled={loading}>
+              {loading ? 'Guardando...' : '✅ Guardar'}
             </button>
           </div>
         </form>
@@ -198,6 +254,7 @@ export default function Pedidos() {
   const [detalle, setDetalle] = useState(null);
   const [pedidoSel, setPedidoSel] = useState(null);
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [pedidoAEditar, setPedidoAEditar] = useState(null);
 
   const cargar = () => getPedidosAdmin().then(({ data }) => setPedidos(data));
   useEffect(() => { cargar(); }, []);
@@ -209,9 +266,13 @@ export default function Pedidos() {
   };
 
   const handleEstado = async (id, estado) => {
-    await cambiarEstado(id, estado);
-    cargar();
-    if (pedidoSel?.id === id) setPedidoSel({ ...pedidoSel, estado });
+    try {
+      await cambiarEstado(id, estado);
+      cargar();
+      if (pedidoSel?.id === id) setPedidoSel({ ...pedidoSel, estado });
+    } catch (err) {
+      alert(err.response?.data?.error || 'Error al cambiar estado');
+    }
   };
 
   return (
@@ -236,7 +297,7 @@ export default function Pedidos() {
                   <th style={styles.th}>Total</th>
                   <th style={styles.th}>Estado</th>
                   <th style={styles.th}>Fecha</th>
-                  <th style={styles.th}>Ver</th>
+                  <th style={styles.th}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -250,14 +311,27 @@ export default function Pedidos() {
                       <select
                         value={p.estado}
                         onChange={(e) => handleEstado(p.id, e.target.value)}
-                        style={{ background: colorEstado[p.estado], color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.5rem', cursor: 'pointer', fontWeight: '600' }}
+                        disabled={p.estado === 'cancelado'}
+                        style={{
+                          background: colorEstado[p.estado],
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '0.3rem 0.5rem',
+                          cursor: p.estado === 'cancelado' ? 'not-allowed' : 'pointer',
+                          fontWeight: '600',
+                          opacity: p.estado === 'cancelado' ? 0.7 : 1
+                        }}
                       >
                         {ESTADOS.map((e) => <option key={e} value={e}>{e}</option>)}
                       </select>
                     </td>
                     <td style={styles.td}>{new Date(p.createdAt).toLocaleDateString('es-AR')}</td>
                     <td style={styles.td}>
-                      <button style={styles.btnSmall} onClick={() => verDetalle(p)}>🔍</button>
+                      <button style={styles.btnSmall} onClick={() => verDetalle(p)} title="Ver detalle">🔍</button>
+                      {p.estado !== 'entregado' && p.estado !== 'cancelado' && (
+                        <button style={styles.btnSmall} onClick={() => setPedidoAEditar(p)} title="Editar">✏️</button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -304,6 +378,14 @@ export default function Pedidos() {
         <ModalNuevoPedido
           onCerrar={() => setMostrarModal(false)}
           onCreado={cargar}
+        />
+      )}
+
+      {pedidoAEditar && (
+        <ModalEditarPedido
+          pedido={pedidoAEditar}
+          onCerrar={() => setPedidoAEditar(null)}
+          onGuardado={cargar}
         />
       )}
     </div>

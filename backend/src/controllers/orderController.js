@@ -41,17 +41,40 @@ exports.cambiarEstado = async (req, res) => {
   const { id } = req.params;
   const { estado } = req.body;
   const estadosValidos = ['pendiente', 'confirmado', 'entregado', 'cancelado'];
+
   if (!estadosValidos.includes(estado))
     return res.status(400).json({ error: 'Estado inválido' });
 
   try {
+    // Verificar estado actual
+    const [rows] = await pool.query('SELECT estado FROM pedidos WHERE id = ?', [id]);
+    if (rows.length === 0)
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+
+    if (rows[0].estado === 'cancelado')
+      return res.status(400).json({ error: 'No se puede modificar un pedido cancelado' });
+
     if (estado === 'cancelado') {
       await pool.query('CALL sp_admin_cancelar_pedido_con_stock(?)', [id]);
     } else {
       await pool.query('CALL sp_admin_cambiar_estado_pedido(?,?)', [id, estado]);
     }
+
     res.json({ mensaje: `Estado actualizado a: ${estado}` });
   } catch (err) {
     res.status(400).json({ error: err.message || 'Error al cambiar estado' });
+  }
+};
+
+exports.editarPedido = async (req, res) => {
+  const { id } = req.params;
+  const { nombre_cliente, telefono, notas } = req.body;
+  try {
+    await pool.query('CALL sp_admin_editar_pedido(?,?,?,?)',
+      [id, nombre_cliente, telefono, notas || null]);
+    res.json({ mensaje: 'Pedido actualizado' });
+  } catch (err) {
+    console.error('Error editarPedido:', err.message);
+    res.status(500).json({ error: err.message || 'Error al editar pedido' });
   }
 };

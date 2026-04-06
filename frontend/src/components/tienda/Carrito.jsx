@@ -1,6 +1,6 @@
 import { useCart } from '../../hooks/useCart';
 
-export default function Carrito({ onConfirmar }) {
+export default function Carrito({ onConfirmar, productos }) {
   const { carrito, quitar, cambiarCantidad, total } = useCart();
 
   if (carrito.length === 0) {
@@ -16,21 +16,32 @@ export default function Carrito({ onConfirmar }) {
     <div style={styles.wrapper}>
       <h3 style={styles.titulo}>🛒 Tu pedido</h3>
       <div style={styles.items}>
-        {carrito.map((p) => (
-          <div key={p.id} style={styles.item}>
-            <div style={styles.itemInfo}>
-              <span style={styles.itemNombre}>{p.nombre}</span>
-              <span style={styles.itemPrecio}>${Number(p.precio).toLocaleString('es-AR')} c/u</span>
+        {carrito.map((p) => {
+          const stockOriginal = productos?.find(prod => prod.id === p.id)?.stock ?? p.stock ?? 99;
+          return (
+            <div key={p.id} style={styles.item}>
+              <div style={styles.itemInfo}>
+                <span style={styles.itemNombre}>{p.nombre}</span>
+                <span style={styles.itemPrecio}>${Number(p.precio).toLocaleString('es-AR')} c/u</span>
+              </div>
+              <div style={styles.itemControles}>
+                <button style={styles.btnCant} onClick={() => cambiarCantidad(p.id, p.cantidad - 1)}>−</button>
+                <span style={styles.cantidad}>{p.cantidad}</span>
+                <button
+                  style={{
+                    ...styles.btnCant,
+                    opacity: p.cantidad >= stockOriginal ? 0.4 : 1,
+                    cursor: p.cantidad >= stockOriginal ? 'not-allowed' : 'pointer'
+                  }}
+                  onClick={() => p.cantidad < stockOriginal && cambiarCantidad(p.id, p.cantidad + 1)}
+                  disabled={p.cantidad >= stockOriginal}
+                >+</button>
+                <button style={styles.btnQuitar} onClick={() => quitar(p.id)}>✕</button>
+              </div>
+              <span style={styles.subtotal}>${Number(p.precio * p.cantidad).toLocaleString('es-AR')}</span>
             </div>
-            <div style={styles.itemControles}>
-              <button style={styles.btnCant} onClick={() => cambiarCantidad(p.id, p.cantidad - 1)}>−</button>
-              <span style={styles.cantidad}>{p.cantidad}</span>
-              <button style={styles.btnCant} onClick={() => cambiarCantidad(p.id, p.cantidad + 1)}>+</button>
-              <button style={styles.btnQuitar} onClick={() => quitar(p.id)}>✕</button>
-            </div>
-            <span style={styles.subtotal}>${Number(p.precio * p.cantidad).toLocaleString('es-AR')}</span>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <div style={styles.totalRow}>
         <span style={styles.totalLabel}>Total</span>

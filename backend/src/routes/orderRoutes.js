@@ -9,5 +9,6 @@ router.post('/', ctrl.registrarPedido);
 router.get('/admin', auth, ctrl.getPedidosAdmin);
 router.get('/admin/:id', auth, ctrl.getDetallePedido);
 router.patch('/admin/:id/estado', auth, ctrl.cambiarEstado);
+router.put('/admin/:id', auth, ctrl.editarPedido);
 
 module.exports = router;

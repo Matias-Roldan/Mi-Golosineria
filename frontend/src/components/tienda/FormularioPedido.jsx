@@ -49,7 +49,7 @@ export default function FormularioPedido({ onCancelar }) {
           </div>
           <div style={styles.field}>
             <label style={styles.label}>WhatsApp / Teléfono *</label>
-            <input style={styles.input} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Ej: 5491155556666" required />
+            <input style={styles.input} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Ej: 1155556666" required />
           </div>
           <div style={styles.field}>
             <label style={styles.label}>Notas (opcional)</label>

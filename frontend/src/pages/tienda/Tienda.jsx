@@ -65,7 +65,7 @@ export default function Tienda() {
 
           {/* Carrito lateral */}
           <aside style={styles.aside}>
-            <Carrito onConfirmar={() => setMostrarForm(true)} />
+            <Carrito onConfirmar={() => setMostrarForm(true)} productos={productos} />
           </aside>
         </div>
       </div>
