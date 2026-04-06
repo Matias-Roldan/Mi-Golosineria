@@ -182,7 +182,10 @@ export default function Tienda() {
 
           {/* Logo + copy */}
           <div style={T.headerLeft}>
-            
+            <div style={T.eyebrow}>
+              <span style={T.eyebrowDot} />
+              Tienda Online
+            </div>
             <h1 style={{ ...T.headerTitle, fontSize: isMobile ? 'clamp(1.5rem,7vw,1.9rem)' : 'clamp(1.8rem,3vw,2.2rem)' }}>
               Mi Golosinería
             </h1>
