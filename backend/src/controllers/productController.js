@@ -34,10 +34,11 @@ exports.crearProducto = async (req, res) => {
   const { nombre, descripcion, precio, precio_costo, categoria, stock, imagen_url } = req.body;
   try {
     await pool.query('CALL sp_admin_crear_producto(?,?,?,?,?,?,?)',
-      [nombre, descripcion, precio, precio_costo, categoria, stock, imagen_url]);
+      [nombre, descripcion || null, parseFloat(precio), parseFloat(precio_costo), categoria, parseInt(stock), imagen_url || null]);
     res.status(201).json({ mensaje: 'Producto creado exitosamente' });
   } catch (err) {
-    res.status(500).json({ error: 'Error al crear producto' });
+    console.error('❌ Error crearProducto:', err.message);
+    res.status(500).json({ error: err.message });
   }
 };
 
