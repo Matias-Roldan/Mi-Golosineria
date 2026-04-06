@@ -1,37 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  body {
-    @apply bg-pastel-cream text-brand-text font-sans;
-  }
-  * {
-    @apply border-brand-border;
-  }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-@layer components {
-  .btn-primary {
-    @apply bg-pastel-blue text-brand-text font-medium px-4 py-2 rounded-xl
-           hover:bg-pastel-blueHover transition-colors duration-150 shadow-soft;
-  }
-  .btn-danger {
-    @apply bg-pastel-rose text-pastel-roseText font-medium px-4 py-2 rounded-xl
-           hover:bg-red-100 transition-colors duration-150;
-  }
-  .card {
-    @apply bg-brand-white rounded-2xl shadow-soft p-5 border border-brand-border;
-  }
-  .input {
-    @apply w-full bg-pastel-cream border border-brand-border rounded-xl px-3 py-2
-           text-sm text-brand-text placeholder:text-brand-muted
-           focus:outline-none focus:ring-2 focus:ring-pastel-blueBorder transition;
-  }
-  .badge-pending  { @apply bg-pastel-amber  text-pastel-amberText  text-xs font-medium px-2 py-0.5 rounded-full; }
-  .badge-success  { @apply bg-pastel-mint   text-pastel-mintText   text-xs font-medium px-2 py-0.5 rounded-full; }
-  .badge-danger   { @apply bg-pastel-rose   text-pastel-roseText   text-xs font-medium px-2 py-0.5 rounded-full; }
-  .badge-info     { @apply bg-pastel-blue   text-brand-text        text-xs font-medium px-2 py-0.5 rounded-full; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f3f4f6;
 }

@@ -35,3 +35,14 @@ exports.getHeatmapHorarios = async (req, res) => {
     res.status(500).json({ error: 'Error al obtener heatmap' });
   }
 };
+
+exports.getCategorias = async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT id, nombre FROM categorias WHERE activa = 1 ORDER BY nombre ASC'
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener categorías' });
+  }
+};

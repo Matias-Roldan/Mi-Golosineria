@@ -29,3 +29,18 @@ exports.editarCliente = async (req, res) => {
     res.status(400).json({ error: err.message || 'Error al editar cliente' });
   }
 };
+
+exports.crearCliente = async (req, res) => {
+  const { nombre, telefono, direccion } = req.body;
+  if (!nombre || !telefono)
+    return res.status(400).json({ error: 'Nombre y teléfono son requeridos' });
+  try {
+    const [rows] = await pool.query(
+      'CALL sp_admin_crear_cliente(?, ?, ?)',
+      [nombre, telefono, direccion || null]
+    );
+    res.status(201).json({ mensaje: 'Cliente creado', id: rows[0][0].id_generado });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Error al crear cliente' });
+  }
+};
