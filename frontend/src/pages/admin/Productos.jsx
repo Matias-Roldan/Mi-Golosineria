@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Sidebar from '../../components/admin/Sidebar';
 import {
   getProductosAdmin, crearProducto, editarProducto,
-  eliminarProducto, toggleVisibilidad
+  eliminarProducto, toggleVisibilidad, subirImagen
 } from '../../api/productosApi';
 import { getCategorias } from '../../api/adminApi';
 
@@ -17,6 +17,8 @@ export default function Productos() {
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [imagenPreview, setImagenPreview] = useState(null);
+  const [subiendoImagen, setSubiendoImagen] = useState(false);
 
   const cargar = () => getProductosAdmin().then(({ data }) => setProductos(data));
 
@@ -24,6 +26,23 @@ export default function Productos() {
     cargar();
     getCategorias().then(({ data }) => setCategorias(data));
   }, []);
+
+  const handleImagen = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setSubiendoImagen(true);
+    try {
+      const formData = new FormData();
+      formData.append('imagen', file);
+      const { data } = await subirImagen(formData);
+      setForm((prev) => ({ ...prev, imagen_url: data.url }));
+      setImagenPreview(data.url);
+    } catch {
+      alert('Error al subir la imagen');
+    } finally {
+      setSubiendoImagen(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,6 +52,7 @@ export default function Productos() {
       await crearProducto(form);
     }
     setForm(emptyForm);
+    setImagenPreview(null);
     setEditId(null);
     setShowForm(false);
     cargar();
@@ -48,6 +68,7 @@ export default function Productos() {
       stock: p.stock,
       imagen_url: p.imagenUrl || ''
     });
+    setImagenPreview(p.imagenUrl || null);
     setEditId(p.id);
     setShowForm(true);
   };
@@ -70,7 +91,7 @@ export default function Productos() {
       <main style={styles.main}>
         <div style={styles.header}>
           <h1 style={styles.title}>🍬 Productos</h1>
-          <button style={styles.btnPrimary} onClick={() => { setForm(emptyForm); setEditId(null); setShowForm(true); }}>
+          <button style={styles.btnPrimary} onClick={() => { setForm(emptyForm); setImagenPreview(null); setEditId(null); setShowForm(true); }}>
             + Nuevo producto
           </button>
         </div>
@@ -120,9 +141,25 @@ export default function Productos() {
               </div>
 
               <div>
-                <label style={styles.label}>URL Imagen</label>
-                <input style={styles.input} value={form.imagen_url}
-                  onChange={(e) => setForm({ ...form, imagen_url: e.target.value })} />
+                <label style={styles.label}>Imagen del producto</label>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleImagen}
+                  style={{ fontSize: '0.9rem', width: '100%' }}
+                />
+                {subiendoImagen && (
+                  <p style={{ color: '#7c3aed', fontSize: '0.85rem', marginTop: '0.4rem' }}>
+                    Subiendo imagen...
+                  </p>
+                )}
+                {(imagenPreview || form.imagen_url) && (
+                  <img
+                    src={imagenPreview || form.imagen_url}
+                    alt="Preview"
+                    style={{ marginTop: '0.75rem', height: '100px', borderRadius: '8px', objectFit: 'cover' }}
+                  />
+                )}
               </div>
 
               <div style={{ gridColumn: '1 / -1' }}>
@@ -132,7 +169,9 @@ export default function Productos() {
               </div>
 
               <div style={styles.formActions}>
-                <button style={styles.btnPrimary} type="submit">Guardar</button>
+                <button style={styles.btnPrimary} type="submit" disabled={subiendoImagen}>
+                  {subiendoImagen ? 'Subiendo imagen...' : 'Guardar'}
+                </button>
                 <button style={styles.btnSecondary} type="button" onClick={() => setShowForm(false)}>Cancelar</button>
               </div>
 
@@ -144,6 +183,7 @@ export default function Productos() {
           <table style={styles.table}>
             <thead>
               <tr style={styles.thead}>
+                <th style={styles.th}>Imagen</th>
                 <th style={styles.th}>Nombre</th>
                 <th style={styles.th}>Categoría</th>
                 <th style={styles.th}>Precio</th>
@@ -156,6 +196,12 @@ export default function Productos() {
             <tbody>
               {productos.map((p) => (
                 <tr key={p.id} style={styles.tr}>
+                  <td style={styles.td}>
+                    {p.imagenUrl
+                      ? <img src={p.imagenUrl} alt={p.nombre} style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover' }} />
+                      : <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🍬</div>
+                    }
+                  </td>
                   <td style={styles.td}>{p.nombre}</td>
                   <td style={styles.td}>
                     <span style={styles.categoriaBadge}>{p.categoria}</span>

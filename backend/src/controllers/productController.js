@@ -44,13 +44,16 @@ exports.crearProducto = async (req, res) => {
 
 exports.editarProducto = async (req, res) => {
   const { id } = req.params;
-  const { nombre, precio, precio_costo, categoria, stock } = req.body;
+  const { nombre, precio, precio_costo, categoria, stock, imagen_url } = req.body;
   try {
-    await pool.query('CALL sp_admin_editar_producto(?,?,?,?,?,?)',
-      [id, nombre, precio, precio_costo, categoria, stock]);
+    await pool.query(
+      'CALL sp_admin_editar_producto(?,?,?,?,?,?,?)',
+      [id, nombre, parseFloat(precio), parseFloat(precio_costo), categoria, parseInt(stock), imagen_url || null]
+    );
     res.json({ mensaje: 'Producto actualizado' });
   } catch (err) {
-    res.status(500).json({ error: 'Error al editar producto' });
+    console.error('Error editarProducto:', err.message);
+    res.status(500).json({ error: err.message || 'Error al editar producto' });
   }
 };
 
