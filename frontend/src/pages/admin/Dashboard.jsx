@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '../../components/admin/Sidebar';
 import StatsCard from '../../components/admin/StatsCard';
-import { getKpis, getVentasDiarias, getTopProductos } from '../../api/adminApi';
+import { getKpis, getVentasDiarias, getTopProductos, getHeatmap, getAnalisisPareto, getAnalisisRFM, getSaludStock, getCrossSelling } from '../../api/adminApi';
 
 // ─── Skeleton ────────────────────────────────────────────────────────
 function Skeleton() {
@@ -33,15 +33,28 @@ export default function Dashboard() {
   const [kpis, setKpis]               = useState(null);
   const [ventas, setVentas]           = useState([]);
   const [topProductos, setTopProductos] = useState([]);
+  const [heatmap, setHeatmap]         = useState([]);
+  const [pareto, setPareto]           = useState([]);
+  const [rfm, setRfm]                 = useState([]);
+  const [stock, setStock]             = useState([]);
+  const [crossSelling, setCrossSelling] = useState([]);
   const [loading, setLoading]         = useState(true);
   const [hovBar, setHovBar]           = useState(null);
 
   useEffect(() => {
-    Promise.all([getKpis(), getVentasDiarias(), getTopProductos()])
-      .then(([kpisRes, ventasRes, topRes]) => {
+    Promise.all([
+      getKpis(), getVentasDiarias(), getTopProductos(),
+      getHeatmap(), getAnalisisPareto(), getAnalisisRFM(), getSaludStock(), getCrossSelling(),
+    ])
+      .then(([kpisRes, ventasRes, topRes, heatRes, paretoRes, rfmRes, stockRes, crossRes]) => {
         setKpis(kpisRes.data);
         setVentas(ventasRes.data);
         setTopProductos(topRes.data);
+        setHeatmap(heatRes.data ?? []);
+        setPareto(paretoRes.data ?? []);
+        setRfm(rfmRes.data ?? []);
+        setStock(stockRes.data ?? []);
+        setCrossSelling(crossRes.data ?? []);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -163,6 +176,200 @@ export default function Dashboard() {
               </div>
             )}
 
+            {/* ── Salud de stock ── */}
+            {stock.length > 0 && (
+              <div style={D.card}>
+                <div style={D.cardHeader}>
+                  <div>
+                    <h2 style={D.cardTitle}>Salud del Stock</h2>
+                    <p style={D.cardSub}>Estado actual de inventario por producto</p>
+                  </div>
+                </div>
+                <div style={D.topList}>
+                  {stock.map((p, i) => {
+                    const dias = parseFloat(p.dias_de_invetario_restante) || 0;
+                    const statusColor = dias < 7 ? '#ef4444' : dias < 14 ? '#f59e0b' : '#10b981';
+                    const statusLabel = dias < 7 ? 'crítico' : dias < 14 ? 'bajo' : 'ok';
+                    const stockActual = parseFloat(p.stock_actual) || 0;
+                    const maxStock = Math.max(...stock.map((s) => parseFloat(s.stock_actual) || 0), 1);
+                    const barPct = Math.min((stockActual / maxStock) * 100, 100);
+                    return (
+                      <div key={i} style={D.topRow}>
+                        <div style={{ ...D.rankBadge, background: `${statusColor}18`, color: statusColor, fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase' }}>
+                          {statusLabel}
+                        </div>
+                        <div style={D.topMeta}>
+                          <div style={D.topName}>{p.nombre}</div>
+                          <div style={D.topBarTrack}>
+                            <div style={{ ...D.topBarFill, background: `linear-gradient(90deg, ${statusColor}88, ${statusColor})`, width: `${barPct}%` }} />
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: '#9ca3af', fontWeight: '500', marginTop: '0.25rem' }}>
+                            Venta diaria promedio: <strong style={{ color: '#7c3aed' }}>{parseFloat(p.venta_diaria_promedio).toFixed(1)} ud.</strong>
+                          </div>
+                        </div>
+                        <div style={D.topStats}>
+                          <span style={{ fontSize: '1.3rem', fontWeight: '900', color: statusColor, lineHeight: 1 }}>
+                            {stockActual}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', fontWeight: '600', color: statusColor, opacity: 0.75, whiteSpace: 'nowrap' }}>ud. en stock</span>
+                          <span style={{ fontSize: '0.75rem', fontWeight: '700', color: statusColor, marginTop: '0.2rem', whiteSpace: 'nowrap' }}>
+                            {dias.toFixed(0)} días
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── Análisis Pareto ── */}
+            {pareto.length > 0 && (
+              <div style={D.card}>
+                <div style={D.cardHeader}>
+                  <div>
+                    <h2 style={D.cardTitle}>Análisis Pareto</h2>
+                    <p style={D.cardSub}>Productos que concentran el 80% de los ingresos</p>
+                  </div>
+                </div>
+                <div style={D.topList}>
+                  {pareto.map((p, i) => {
+                    const pctAcum = parseFloat(p.porcentaje_acumulado) || 0;
+                    const pctContrib = parseFloat(p.porcentaje_contribucion) || 0;
+                    const cat = p.categoria_pareto ?? 'C';
+                    const catColor = cat === 'A' ? '#7c3aed' : cat === 'B' ? '#f59e0b' : '#9ca3af';
+                    return (
+                      <div key={i} style={D.topRow}>
+                        <div style={{ ...D.rankBadge, background: `${catColor}18`, color: catColor, fontSize: '0.9rem', fontWeight: '900' }}>
+                          {cat}
+                        </div>
+                        <div style={D.topMeta}>
+                          <div style={D.topName}>{p.nombre}</div>
+                          <div style={D.topBarTrack}>
+                            <div style={{ ...D.topBarFill, width: `${pctAcum}%`, background: cat === 'A' ? 'linear-gradient(90deg, #a855f7, #e879f9)' : cat === 'B' ? 'linear-gradient(90deg, #fbbf24, #f59e0b)' : 'linear-gradient(90deg, #d1d5db, #9ca3af)' }} />
+                          </div>
+                        </div>
+                        <div style={D.topStats}>
+                          <span style={D.topUnidades}>{formatPeso(p.ingresos_producto)}</span>
+                          <span style={{ fontSize: '0.68rem', fontWeight: '600', color: catColor, display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            <span>{pctContrib.toFixed(1)}% propio</span>
+                            <span>·</span>
+                            <span>{pctAcum.toFixed(1)}% acum.</span>
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── Segmentos RFM ── */}
+            {rfm.length > 0 && (
+              <div style={D.card}>
+                <div style={D.cardHeader}>
+                  <div>
+                    <h2 style={D.cardTitle}>Segmentos de Clientes (RFM)</h2>
+                    <p style={D.cardSub}>Clasificación por recencia, frecuencia y monto</p>
+                  </div>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                    <thead>
+                      <tr>
+                        {['Nombre', 'Teléfono', 'Recencia (días)', 'Frecuencia', 'Valor monetario', 'Segmento'].map((col) => (
+                          <th key={col} style={{ padding: '0.5rem 0.75rem', color: '#9ca3af', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', borderBottom: '1px solid #ede9fe', whiteSpace: 'nowrap' }}>
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rfm.map((c, i) => {
+                        const seg = c.segmento_cliente ?? '';
+                        const segColor = seg === 'VIP' ? '#7c3aed' : seg === 'Leal' ? '#10b981' : seg === 'En riesgo' ? '#ef4444' : '#f59e0b';
+                        return (
+                          <tr key={i} style={{ borderBottom: '1px solid #f5f3ff' }}>
+                            <td style={{ padding: '0.55rem 0.75rem', fontWeight: '700', color: '#1e1333' }}>{c.nombre ?? '—'}</td>
+                            <td style={{ padding: '0.55rem 0.75rem', color: '#6b7280' }}>{c.telefono ?? '—'}</td>
+                            <td style={{ padding: '0.55rem 0.75rem', color: '#6b7280', textAlign: 'center' }}>{c.recencia_dias ?? '—'}</td>
+                            <td style={{ padding: '0.55rem 0.75rem', color: '#6b7280', textAlign: 'center' }}>{c.frecuencia_pedidos ?? '—'}</td>
+                            <td style={{ padding: '0.55rem 0.75rem', fontWeight: '600', color: '#1e1333' }}>{formatPeso(c.valor_monetario)}</td>
+                            <td style={{ padding: '0.55rem 0.75rem' }}>
+                              <span style={{ background: `${segColor}18`, color: segColor, fontWeight: '800', fontSize: '0.68rem', textTransform: 'uppercase', borderRadius: '6px', padding: '3px 8px' }}>
+                                {seg || '—'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ── Cross-selling ── */}
+            {crossSelling.length > 0 && (
+              <div style={D.card}>
+                <div style={D.cardHeader}>
+                  <div>
+                    <h2 style={D.cardTitle}>Cross-Selling</h2>
+                    <p style={D.cardSub}>Productos que se compran juntos con frecuencia</p>
+                  </div>
+                </div>
+                <div style={D.topList}>
+                  {crossSelling.slice(0, 8).map((p, i) => (
+                    <div key={i} style={{ ...D.topRow, gap: '0.75rem' }}>
+                      <div style={{ ...D.rankBadge, background: '#f0fdf4', color: '#10b981' }}>{i + 1}</div>
+                      <div style={{ flex: 1, minWidth: 0, fontSize: '0.85rem', fontWeight: '600', color: '#1e1333', wordBreak: 'break-word', lineHeight: '1.4' }}>
+                        {p.producto_a ?? p.producto1} <span style={{ color: '#a855f7', fontWeight: '800' }}>+</span> {p.producto_b ?? p.producto2}
+                      </div>
+                      <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#10b981', flexShrink: 0 }}>
+                        {p.frecuencia} veces
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Heatmap de horarios ── */}
+            {heatmap.length > 0 && (
+              <div style={D.card}>
+                <div style={D.cardHeader}>
+                  <div>
+                    <h2 style={D.cardTitle}>Actividad por Horario</h2>
+                    <p style={D.cardSub}>Pedidos según día y hora</p>
+                  </div>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
+                    <thead>
+                      <tr>
+                        {Object.keys(heatmap[0] ?? {}).map((k) => (
+                          <th key={k} style={{ padding: '0.4rem 0.6rem', color: '#9ca3af', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left', borderBottom: '1px solid #ede9fe', whiteSpace: 'nowrap' }}>
+                            {k}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {heatmap.map((row, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid #f5f3ff' }}>
+                          {Object.values(row).map((val, j) => (
+                            <td key={j} style={{ padding: '0.45rem 0.6rem', color: '#1e1333', fontWeight: j === 0 ? '700' : '500' }}>
+                              {val}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {/* ── Top productos ── */}
             {topProductos.length > 0 && (
               <div style={D.card}>
@@ -269,7 +476,7 @@ const D = {
     margin: '0 0 0.2rem',
   },
   cardSub: {
-    fontSize: '0.72rem',
+    fontSize: '0.76rem',
     color: '#9ca3af',
     fontWeight: '500',
     margin: 0,
@@ -340,6 +547,7 @@ const D = {
     background: '#faf9ff',
     borderRadius: '12px',
     border: '1px solid #f3f0ff',
+    minWidth: 0,
   },
   rankBadge: {
     width: '32px', height: '32px',
@@ -357,9 +565,8 @@ const D = {
     fontWeight: '700',
     color: '#1e1333',
     marginBottom: '0.4rem',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
+    wordBreak: 'break-word',
+    lineHeight: '1.3',
   },
   topBarTrack: {
     height: '5px',
@@ -377,17 +584,21 @@ const D = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'flex-end',
-    gap: '0.1rem',
+    gap: '0.15rem',
     flexShrink: 0,
+    textAlign: 'right',
+    maxWidth: '120px',
   },
   topUnidades: {
     fontSize: '0.85rem',
     fontWeight: '800',
     color: '#1e1333',
+    whiteSpace: 'nowrap',
   },
   topIngresos: {
     fontSize: '0.72rem',
     fontWeight: '600',
     color: '#a78bfa',
+    whiteSpace: 'nowrap',
   },
 };

@@ -1,4 +1,5 @@
 export default function StatsCard({ icon, label, value, color = '#7c3aed' }) {
+  const isLongText = typeof value === 'string' && value.length > 15;
   return (
     <div style={S.card}>
       <div style={{ ...S.iconBadge, background: `${color}18`, border: `1.5px solid ${color}28` }}>
@@ -6,7 +7,7 @@ export default function StatsCard({ icon, label, value, color = '#7c3aed' }) {
       </div>
       <div style={S.body}>
         <p style={S.label}>{label}</p>
-        <p style={{ ...S.value, color }}>{value ?? '—'}</p>
+        <p style={{ ...S.value, ...(isLongText ? S.valueSmall : {}), color }}>{value ?? '—'}</p>
       </div>
     </div>
   );
@@ -48,11 +49,13 @@ const S = {
     fontSize: '1.55rem',
     fontWeight: '900',
     letterSpacing: '-0.03em',
-    lineHeight: 1.1,
+    lineHeight: 1.2,
     fontFamily: 'Georgia, serif',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    wordBreak: 'break-word',
+    overflowWrap: 'anywhere',
     margin: 0,
+  },
+  valueSmall: {
+    fontSize: '1.1rem',
   },
 };
