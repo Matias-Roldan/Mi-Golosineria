@@ -13,6 +13,7 @@ app.use('/api/productos', require('./routes/productRoutes'));
 app.use('/api/pedidos',  require('./routes/orderRoutes'));
 app.use('/api/clientes', require('./routes/userRoutes'));
 app.use('/api/admin',    require('./routes/adminRoutes'));
+app.use('/api/upload', require('./routes/uploadRoutes'));
 
 // Health check
 app.get('/', (req, res) => res.json({ status: 'OK', mensaje: 'Mondelez Store API' }));
