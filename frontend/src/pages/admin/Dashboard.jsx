@@ -248,14 +248,14 @@ export default function Dashboard() {
                           <div style={D.topBarTrack}>
                             <div style={{ ...D.topBarFill, width: `${pctAcum}%`, background: cat === 'A' ? 'linear-gradient(90deg, #a855f7, #e879f9)' : cat === 'B' ? 'linear-gradient(90deg, #fbbf24, #f59e0b)' : 'linear-gradient(90deg, #d1d5db, #9ca3af)' }} />
                           </div>
-                        </div>
-                        <div style={D.topStats}>
-                          <span style={D.topUnidades}>{formatPeso(p.ingresos_producto)}</span>
-                          <span style={{ fontSize: '0.68rem', fontWeight: '600', color: catColor, display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <div style={{ fontSize: '0.68rem', fontWeight: '600', color: catColor, marginTop: '0.3rem', display: 'flex', gap: '0.4rem', whiteSpace: 'nowrap' }}>
                             <span>{pctContrib.toFixed(1)}% propio</span>
                             <span>·</span>
                             <span>{pctAcum.toFixed(1)}% acum.</span>
-                          </span>
+                          </div>
+                        </div>
+                        <div style={D.topStats}>
+                          <span style={D.topUnidades}>{formatPeso(p.ingresos_producto)}</span>
                         </div>
                       </div>
                     );
