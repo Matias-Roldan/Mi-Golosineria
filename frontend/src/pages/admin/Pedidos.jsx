@@ -394,19 +394,19 @@ export default function Pedidos() {
 
 const styles = {
   layout: { display: 'flex' },
-  main: { marginLeft: '240px', padding: '2rem', flex: 1, background: '#f3f4f6', minHeight: '100vh' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
-  title: { fontSize: '1.75rem', color: '#1f2937' },
-  btnPrimary: { background: '#7c3aed', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
+  main: { marginLeft: '240px', padding: '2rem 2.5rem', flex: 1, background: '#f5f4ff', minHeight: '100vh', fontFamily: "'Nunito', system-ui, sans-serif" },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem' },
+  title: { fontSize: '1.85rem', fontWeight: '900', color: '#1e1333', letterSpacing: '-0.03em', margin: 0 },
+  btnPrimary: { background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: 'white', border: 'none', padding: '0.65rem 1.4rem', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', boxShadow: '0 4px 14px rgba(124,58,237,0.35)', fontFamily: 'inherit' },
   btnSmall: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' },
   content: { display: 'flex', gap: '1.5rem', alignItems: 'flex-start' },
-  tableWrapper: { flex: 1, background: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' },
+  tableWrapper: { flex: 1, background: 'white', borderRadius: '20px', overflow: 'hidden', border: '1px solid #ede9fe', boxShadow: '0 1px 6px rgba(109,40,217,0.06)' },
   table: { width: '100%', borderCollapse: 'collapse' },
-  th: { padding: '0.85rem 1rem', textAlign: 'left', fontWeight: '600', color: '#374151', fontSize: '0.85rem', background: '#f9fafb' },
-  tr: { borderBottom: '1px solid #f3f4f6' },
-  td: { padding: '0.85rem 1rem', fontSize: '0.9rem', color: '#374151' },
-  detalle: { width: '320px', background: 'white', borderRadius: '10px', padding: '1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' },
-  btnCerrar: { marginTop: '1rem', background: '#e5e7eb', border: 'none', padding: '0.5rem 1rem', borderRadius: '7px', cursor: 'pointer', width: '100%' },
+  th: { padding: '0.875rem 1.25rem', textAlign: 'left', fontWeight: '700', color: '#9ca3af', fontSize: '0.68rem', background: '#faf9ff', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid #ede9fe' },
+  tr: { borderBottom: '1px solid #f5f3ff' },
+  td: { padding: '0.875rem 1.25rem', fontSize: '0.88rem', color: '#1e1333', fontWeight: '500' },
+  detalle: { width: '320px', background: 'white', borderRadius: '20px', padding: '1.5rem', border: '1px solid #ede9fe', boxShadow: '0 1px 6px rgba(109,40,217,0.06)' },
+  btnCerrar: { marginTop: '1rem', background: '#f5f3ff', border: '1px solid #ede9fe', color: '#7c3aed', padding: '0.6rem 1rem', borderRadius: '10px', cursor: 'pointer', width: '100%', fontWeight: '700', fontFamily: 'inherit', fontSize: '0.875rem' },
 };
 
 const modal = {
