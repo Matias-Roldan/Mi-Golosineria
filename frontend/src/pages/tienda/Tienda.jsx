@@ -63,6 +63,52 @@ const skeletonStyles = {
   },
 };
 
+// ─── Ticker promocional ──────────────────────────────────────────────
+const TICKER_ITEMS = [
+  '🍫 Chocolates importados',
+  '🍬 Caramelos sin TACC',
+  '🚀 Envíos en el día',
+  '🎁 Ideal para eventos',
+  '💜 Más de 50 sabores',
+  '🍪 Galletas y snacks',
+];
+
+const Ticker = () => {
+  const text = TICKER_ITEMS.join('   ·   ') + '   ·   ';
+  return (
+    <div style={TICK.bar}>
+      <style>{`
+        @keyframes ticker {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-50%); }
+        }
+      `}</style>
+      <div style={TICK.track}>
+        <span style={TICK.content}>{text}{text}</span>
+      </div>
+    </div>
+  );
+};
+
+const TICK = {
+  bar: {
+    background: 'linear-gradient(90deg, #7c3aed, #a855f7)',
+    overflow: 'hidden',
+    whiteSpace: 'nowrap',
+    padding: '0.5rem 0',
+  },
+  track: { display: 'inline-block', willChange: 'transform' },
+  content: {
+    display: 'inline-block',
+    animation: 'ticker 28s linear infinite',
+    fontSize: '0.75rem',
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.9)',
+    letterSpacing: '0.04em',
+    paddingRight: '0',
+  },
+};
+
 // ─── Ruido SVG de fondo ──────────────────────────────────────────────
 const NoiseBg = () => (
   <svg style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0, opacity: 0.025 }}>
@@ -210,6 +256,7 @@ export default function Tienda() {
           </button>
         </div>
       </header>
+      <Ticker />
 
       {/* ══ CONTENIDO ════════════════════════════════════════════════ */}
       <div style={{ ...T.container, padding: isMobile ? '0 1rem 7rem' : isTablet ? '0 1.5rem 5rem' : '0 2.5rem 3rem' }}>

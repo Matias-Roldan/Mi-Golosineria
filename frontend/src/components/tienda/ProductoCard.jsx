@@ -48,11 +48,11 @@ export default function ProductoCard({ producto }) {
     <article
       style={{
         ...C.card,
-        transform: hovered && !sinStock ? 'translateY(-5px)' : 'translateY(0)',
+        transform: hovered && !sinStock ? 'translateY(-6px)' : 'translateY(0)',
         boxShadow: hovered && !sinStock
-          ? '0 16px 48px rgba(192,132,252,0.22), 0 0 0 1.5px #c084fc'
-          : '0 2px 12px rgba(192,132,252,0.1), 0 0 0 1px #e9d5ff',
-        opacity: sinStock ? 0.72 : 1,
+          ? '0 20px 52px rgba(168,85,247,0.22), 0 0 0 2px #c084fc'
+          : '0 2px 12px rgba(168,85,247,0.08), 0 0 0 1px #ede9fe',
+        opacity: sinStock ? 0.68 : 1,
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -153,19 +153,19 @@ export default function ProductoCard({ producto }) {
 const C = {
   card: {
     background: 'white',
-    borderRadius: '20px',
+    borderRadius: '22px',
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
     transition: 'transform 0.25s cubic-bezier(0.34,1.2,0.64,1), box-shadow 0.25s ease, opacity 0.2s ease',
     cursor: 'default',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
+    fontFamily: "'Nunito', system-ui, sans-serif",
   },
 
   // Imagen
   imgWrap: {
-    height: '168px',
-    background: 'linear-gradient(145deg, #f3e8ff 0%, #faf5ff 100%)',
+    height: '190px',
+    background: 'linear-gradient(145deg, #f3e8ff 0%, #fce7f3 50%, #faf5ff 100%)',
     position: 'relative',
     overflow: 'hidden',
     flexShrink: 0,
@@ -216,7 +216,7 @@ const C = {
     gap: '0.5rem',
   },
   nombre: {
-    fontSize: '0.975rem',
+    fontSize: '1rem',
     fontWeight: '800',
     color: '#1e1333',
     margin: 0,
@@ -265,42 +265,42 @@ const C = {
   },
   precioWrap: { display: 'flex', flexDirection: 'column', lineHeight: 1.1 },
   precioLabel: {
-    fontSize: '0.62rem',
+    fontSize: '0.6rem',
     fontWeight: '700',
     color: '#a78bfa',
     textTransform: 'uppercase',
-    letterSpacing: '0.1em',
+    letterSpacing: '0.12em',
   },
   precio: {
-    fontSize: '1.15rem',
+    fontSize: '1.3rem',
     fontWeight: '900',
     color: '#1e1333',
-    letterSpacing: '-0.02em',
+    letterSpacing: '-0.03em',
     fontFamily: 'Georgia, serif',
   },
 
   // Botón
   btn: {
-    padding: '0.55rem 1rem',
-    borderRadius: '12px',
+    padding: '0.6rem 1.1rem',
+    borderRadius: '14px',
     border: 'none',
-    background: 'linear-gradient(135deg, #c084fc, #e879f9)',
+    background: 'linear-gradient(135deg, #a855f7, #e879f9)',
     color: 'white',
     fontWeight: '800',
-    fontSize: '0.82rem',
+    fontSize: '0.85rem',
     cursor: 'pointer',
     transition: 'all 0.2s cubic-bezier(0.34,1.2,0.64,1)',
     minHeight: '44px',
-    minWidth: '90px',
-    fontFamily: 'inherit',
+    minWidth: '96px',
+    fontFamily: "'Nunito', inherit",
     letterSpacing: '0.01em',
-    boxShadow: '0 4px 14px rgba(192,132,252,0.35)',
+    boxShadow: '0 4px 16px rgba(168,85,247,0.35)',
     whiteSpace: 'nowrap',
     flexShrink: 0,
   },
   btnHover: {
-    transform: 'translateY(-2px) scale(1.04)',
-    boxShadow: '0 8px 24px rgba(192,132,252,0.5)',
+    transform: 'translateY(-2px) scale(1.05)',
+    boxShadow: '0 10px 28px rgba(168,85,247,0.5)',
   },
   btnAdding: {
     background: 'linear-gradient(135deg, #10b981, #34d399)',
