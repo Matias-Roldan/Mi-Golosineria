@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Plus, Pencil, Trash2, Eye, EyeOff, Search, X } from 'lucide-react';
 import Sidebar from '../../components/admin/Sidebar';
 import {
   getProductosAdmin, crearProducto, editarProducto,
@@ -11,21 +13,18 @@ const emptyForm = {
   precio_costo: '', categoria: '', stock: '', imagen_url: ''
 };
 
-export default function Productos() {
-  const [productos, setProductos] = useState([]);
-  const [categorias, setCategorias] = useState([]);
-  const [form, setForm] = useState(emptyForm);
-  const [editId, setEditId] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [imagenPreview, setImagenPreview] = useState(null);
+const fadeUp = {
+  hidden: { opacity: 0, y: 18 },
+  visible: (i = 0) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.07, duration: 0.38, ease: 'easeOut' },
+  }),
+};
+
+// ── Modal Crear / Editar Producto ───────────────────────────────────
+function ModalProducto({ editId, form, setForm, categorias, onCerrar, onGuardar }) {
+  const [imagenPreview, setImagenPreview] = useState(form.imagen_url || null);
   const [subiendoImagen, setSubiendoImagen] = useState(false);
-
-  const cargar = () => getProductosAdmin().then(({ data }) => setProductos(data));
-
-  useEffect(() => {
-    cargar();
-    getCategorias().then(({ data }) => setCategorias(data));
-  }, []);
 
   const handleImagen = async (e) => {
     const file = e.target.files[0];
@@ -46,13 +45,115 @@ export default function Productos() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    await onGuardar(subiendoImagen);
+  };
+
+  return (
+    <div style={modal.overlay}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        style={modal.container}
+      >
+        <div style={modal.header}>
+          <h3 style={modal.titulo}>{editId ? '✏️ Editar producto' : '✨ Nuevo producto'}</h3>
+          <button style={modal.btnCerrar} onClick={onCerrar}><X size={18} /></button>
+        </div>
+        <form onSubmit={handleSubmit} style={modal.body}>
+          <div style={modal.grid2}>
+            <div>
+              <label style={modal.label}>Nombre *</label>
+              <input style={modal.input} value={form.nombre}
+                onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
+            </div>
+            <div>
+              <label style={modal.label}>Categoría *</label>
+              <select style={modal.input} value={form.categoria}
+                onChange={(e) => setForm({ ...form, categoria: e.target.value })} required>
+                <option value="">— Seleccioná —</option>
+                {categorias.map((c) => (
+                  <option key={c.id} value={c.nombre}>{c.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={modal.label}>Precio venta *</label>
+              <input style={modal.input} type="number" value={form.precio}
+                onChange={(e) => setForm({ ...form, precio: e.target.value })} required />
+            </div>
+            <div>
+              <label style={modal.label}>Precio costo *</label>
+              <input style={modal.input} type="number" value={form.precio_costo}
+                onChange={(e) => setForm({ ...form, precio_costo: e.target.value })} required />
+            </div>
+            <div>
+              <label style={modal.label}>Stock *</label>
+              <input style={modal.input} type="number" value={form.stock}
+                onChange={(e) => setForm({ ...form, stock: e.target.value })} required />
+            </div>
+            <div>
+              <label style={modal.label}>Imagen del producto</label>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleImagen}
+                style={{ fontSize: '0.85rem', width: '100%', color: '#8b8b9e' }}
+              />
+              {subiendoImagen && (
+                <p style={{ color: '#a855f7', fontSize: '0.82rem', marginTop: '0.4rem' }}>Subiendo imagen...</p>
+              )}
+              {(imagenPreview || form.imagen_url) && (
+                <img
+                  src={imagenPreview || form.imagen_url}
+                  alt="Preview"
+                  style={{ marginTop: '0.75rem', height: '80px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #2a2a3a' }}
+                />
+              )}
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={modal.label}>Descripción</label>
+              <input style={modal.input} value={form.descripcion}
+                onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+                placeholder="Descripción opcional..." />
+            </div>
+          </div>
+
+          <div style={modal.acciones}>
+            <button type="button" style={modal.btnSecundario} onClick={onCerrar}>Cancelar</button>
+            <button type="submit" style={modal.btnPrimario} disabled={subiendoImagen}>
+              {subiendoImagen ? 'Subiendo imagen...' : (editId ? 'Guardar cambios' : '✅ Crear producto')}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
+
+export default function Productos() {
+  const [productos, setProductos] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [form, setForm] = useState(emptyForm);
+  const [editId, setEditId] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroCat, setFiltroCat] = useState('');
+
+  const cargar = () => getProductosAdmin().then(({ data }) => setProductos(data));
+
+  useEffect(() => {
+    cargar();
+    getCategorias().then(({ data }) => setCategorias(data));
+  }, []);
+
+  const handleGuardar = async () => {
     if (editId) {
       await editarProducto(editId, form);
     } else {
       await crearProducto(form);
     }
     setForm(emptyForm);
-    setImagenPreview(null);
     setEditId(null);
     setShowForm(false);
     cargar();
@@ -68,7 +169,6 @@ export default function Productos() {
       stock: p.stock,
       imagen_url: p.imagenUrl || ''
     });
-    setImagenPreview(p.imagenUrl || null);
     setEditId(p.id);
     setShowForm(true);
   };
@@ -85,168 +185,250 @@ export default function Productos() {
     cargar();
   };
 
+  const productosFiltrados = productos.filter(p => {
+    const matchSearch = !busqueda || p.nombre.toLowerCase().includes(busqueda.toLowerCase());
+    const matchCat = !filtroCat || p.categoria === filtroCat;
+    return matchSearch && matchCat;
+  });
+
   return (
     <div style={styles.layout}>
       <Sidebar />
       <main style={styles.main}>
-        <div style={styles.header}>
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={0} style={styles.header}>
           <h1 style={styles.title}>🍬 Productos</h1>
-          <button style={styles.btnPrimary} onClick={() => { setForm(emptyForm); setImagenPreview(null); setEditId(null); setShowForm(true); }}>
-            + Nuevo producto
+          <button style={styles.btnPrimary} onClick={() => { setForm(emptyForm); setEditId(null); setShowForm(true); }}>
+            <Plus size={16} style={{ marginRight: '0.4rem' }} />
+            Nuevo producto
           </button>
-        </div>
+        </motion.div>
 
-        {showForm && (
-          <div style={styles.formCard}>
-            <h3 style={{ marginBottom: '1rem' }}>{editId ? 'Editar producto' : 'Nuevo producto'}</h3>
-            <form onSubmit={handleSubmit} style={styles.formGrid}>
-
-              <div>
-                <label style={styles.label}>Nombre *</label>
-                <input style={styles.input} value={form.nombre}
-                  onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
-              </div>
-
-              <div>
-                <label style={styles.label}>Categoría *</label>
-                <select
-                  style={styles.input}
-                  value={form.categoria}
-                  onChange={(e) => setForm({ ...form, categoria: e.target.value })}
-                  required
-                >
-                  <option value="">— Seleccioná una categoría —</option>
-                  {categorias.map((c) => (
-                    <option key={c.id} value={c.nombre}>{c.nombre}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={styles.label}>Precio venta *</label>
-                <input style={styles.input} type="number" value={form.precio}
-                  onChange={(e) => setForm({ ...form, precio: e.target.value })} required />
-              </div>
-
-              <div>
-                <label style={styles.label}>Precio costo *</label>
-                <input style={styles.input} type="number" value={form.precio_costo}
-                  onChange={(e) => setForm({ ...form, precio_costo: e.target.value })} required />
-              </div>
-
-              <div>
-                <label style={styles.label}>Stock *</label>
-                <input style={styles.input} type="number" value={form.stock}
-                  onChange={(e) => setForm({ ...form, stock: e.target.value })} required />
-              </div>
-
-              <div>
-                <label style={styles.label}>Imagen del producto</label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handleImagen}
-                  style={{ fontSize: '0.9rem', width: '100%' }}
-                />
-                {subiendoImagen && (
-                  <p style={{ color: '#7c3aed', fontSize: '0.85rem', marginTop: '0.4rem' }}>
-                    Subiendo imagen...
-                  </p>
-                )}
-                {(imagenPreview || form.imagen_url) && (
-                  <img
-                    src={imagenPreview || form.imagen_url}
-                    alt="Preview"
-                    style={{ marginTop: '0.75rem', height: '100px', borderRadius: '8px', objectFit: 'cover' }}
-                  />
-                )}
-              </div>
-
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={styles.label}>Descripción</label>
-                <input style={styles.input} value={form.descripcion}
-                  onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
-              </div>
-
-              <div style={styles.formActions}>
-                <button style={styles.btnPrimary} type="submit" disabled={subiendoImagen}>
-                  {subiendoImagen ? 'Subiendo imagen...' : 'Guardar'}
-                </button>
-                <button style={styles.btnSecondary} type="button" onClick={() => setShowForm(false)}>Cancelar</button>
-              </div>
-
-            </form>
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={1} style={styles.filtros}>
+          <div style={styles.searchWrapper}>
+            <Search size={16} style={styles.searchIcon} />
+            <input
+              style={styles.searchInput}
+              placeholder="Buscar producto..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+            />
           </div>
-        )}
+          <select
+            style={styles.filterSelect}
+            value={filtroCat}
+            onChange={(e) => setFiltroCat(e.target.value)}
+          >
+            <option value="">Todas las categorías</option>
+            {categorias.map(c => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
+          </select>
+        </motion.div>
 
-        <div style={styles.tableWrapper}>
-          <table style={styles.table}>
-            <thead>
-              <tr style={styles.thead}>
-                <th style={styles.th}>Imagen</th>
-                <th style={styles.th}>Nombre</th>
-                <th style={styles.th}>Categoría</th>
-                <th style={styles.th}>Precio</th>
-                <th style={styles.th}>Costo</th>
-                <th style={styles.th}>Stock</th>
-                <th style={styles.th}>Visible</th>
-                <th style={styles.th}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {productos.map((p) => (
-                <tr key={p.id} style={styles.tr}>
-                  <td style={styles.td}>
-                    {p.imagenUrl
-                      ? <img src={p.imagenUrl} alt={p.nombre} style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover' }} />
-                      : <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🍬</div>
-                    }
-                  </td>
-                  <td style={styles.td}>{p.nombre}</td>
-                  <td style={styles.td}>
-                    <span style={styles.categoriaBadge}>{p.categoria}</span>
-                  </td>
-                  <td style={styles.td}>${p.precio}</td>
-                  <td style={styles.td}>${p.precio_costo}</td>
-                  <td style={styles.td}>{p.stock}</td>
-                  <td style={styles.td}>
-                    <span style={{ color: p.visible ? '#10b981' : '#ef4444' }}>
-                      {p.visible ? '✅' : '❌'}
-                    </span>
-                  </td>
-                  <td style={styles.td}>
-                    <button style={styles.btnSmall} onClick={() => handleEditar(p)}>✏️</button>
-                    <button style={styles.btnSmall} onClick={() => handleToggle(p.id)}>👁️</button>
-                    <button style={{ ...styles.btnSmall, color: '#ef4444' }} onClick={() => handleEliminar(p.id)}>🗑️</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <motion.div
+          variants={fadeUp} initial="hidden" animate="visible" custom={2}
+          style={styles.grid}
+        >
+          {productosFiltrados.map((p, idx) => (
+            <motion.div
+              key={p.id}
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              custom={idx * 0.5}
+              style={styles.card}
+              onMouseEnter={e => e.currentTarget.style.borderColor = '#3a3a5a'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = '#2a2a3a'}
+            >
+              <div style={styles.cardImgWrapper}>
+                {p.imagenUrl
+                  ? <img src={p.imagenUrl} alt={p.nombre} style={styles.cardImg} />
+                  : <div style={styles.cardImgPlaceholder}>🍬</div>
+                }
+                <span style={styles.categoriaBadge}>{p.categoria}</span>
+                {!p.visible && (
+                  <span style={styles.ocultoBadge}>Oculto</span>
+                )}
+              </div>
+              <div style={styles.cardBody}>
+                <h3 style={styles.cardNombre}>{p.nombre}</h3>
+                <div style={styles.cardPrices}>
+                  <span style={styles.precioVenta}>${Number(p.precio).toLocaleString('es-AR')}</span>
+                  <span style={styles.precioCosto}>costo ${Number(p.precio_costo).toLocaleString('es-AR')}</span>
+                </div>
+                <div style={styles.cardFooter}>
+                  <span style={{
+                    ...styles.stockBadge,
+                    background: p.stock > 10 ? 'rgba(16,185,129,0.12)' : p.stock > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)',
+                    color: p.stock > 10 ? '#10b981' : p.stock > 0 ? '#f59e0b' : '#f87171',
+                    border: `1px solid ${p.stock > 10 ? 'rgba(16,185,129,0.3)' : p.stock > 0 ? 'rgba(245,158,11,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                  }}>
+                    Stock: {p.stock}
+                  </span>
+                  <div style={styles.cardActions}>
+                    <button
+                      style={styles.btnIcon}
+                      onClick={() => handleToggle(p.id)}
+                      title={p.visible ? 'Ocultar' : 'Mostrar'}
+                    >
+                      {p.visible ? <Eye size={15} /> : <EyeOff size={15} />}
+                    </button>
+                    <button style={styles.btnIconEdit} onClick={() => handleEditar(p)} title="Editar">
+                      <Pencil size={15} />
+                    </button>
+                    <button style={styles.btnIconDelete} onClick={() => handleEliminar(p.id)} title="Eliminar">
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+
+          {productosFiltrados.length === 0 && (
+            <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '4rem', color: '#8b8b9e' }}>
+              No se encontraron productos
+            </div>
+          )}
+        </motion.div>
       </main>
+
+      {showForm && (
+        <ModalProducto
+          editId={editId}
+          form={form}
+          setForm={setForm}
+          categorias={categorias}
+          onCerrar={() => setShowForm(false)}
+          onGuardar={handleGuardar}
+        />
+      )}
     </div>
   );
 }
 
 const styles = {
   layout: { display: 'flex' },
-  main: { marginLeft: '240px', padding: '2rem 2.5rem', flex: 1, background: '#f5f4ff', minHeight: '100vh', fontFamily: "'Nunito', system-ui, sans-serif" },
+  main: {
+    marginLeft: '240px', padding: '2rem 2.5rem', flex: 1,
+    background: '#0f0f13', minHeight: '100vh',
+    fontFamily: "'Nunito', system-ui, sans-serif", color: '#f1f1f3',
+  },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem' },
-  title: { fontSize: '1.85rem', fontWeight: '900', color: '#1e1333', letterSpacing: '-0.03em', margin: 0 },
-  btnPrimary: { background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: 'white', border: 'none', padding: '0.65rem 1.4rem', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', boxShadow: '0 4px 14px rgba(124,58,237,0.35)', fontFamily: 'inherit' },
-  btnSecondary: { background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ede9fe', padding: '0.65rem 1.2rem', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontFamily: 'inherit' },
-  btnSmall: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', marginRight: '0.25rem' },
-  formCard: { background: 'white', borderRadius: '20px', padding: '1.75rem', marginBottom: '1.75rem', border: '1px solid #ede9fe', boxShadow: '0 1px 6px rgba(109,40,217,0.06)' },
-  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
-  formActions: { gridColumn: '1 / -1', display: 'flex', gap: '0.75rem' },
-  label: { display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#9ca3af', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.08em' },
-  input: { width: '100%', padding: '0.65rem 0.9rem', borderRadius: '10px', border: '1px solid #ede9fe', fontSize: '0.9rem', boxSizing: 'border-box', background: 'white', fontFamily: 'inherit', outline: 'none' },
-  tableWrapper: { background: 'white', borderRadius: '20px', overflow: 'hidden', border: '1px solid #ede9fe', boxShadow: '0 1px 6px rgba(109,40,217,0.06)' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  thead: { background: '#faf9ff' },
-  th: { padding: '0.875rem 1.25rem', textAlign: 'left', fontWeight: '700', color: '#9ca3af', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid #ede9fe' },
-  tr: { borderBottom: '1px solid #f5f3ff' },
-  td: { padding: '0.875rem 1.25rem', fontSize: '0.88rem', color: '#1e1333', fontWeight: '500' },
-  categoriaBadge: { background: '#ede9fe', color: '#7c3aed', padding: '0.2rem 0.65rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800' },
+  title: { fontSize: '1.85rem', fontWeight: '900', color: '#f1f1f3', letterSpacing: '-0.03em', margin: 0 },
+  btnPrimary: {
+    background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: 'white',
+    border: 'none', padding: '0.65rem 1.4rem', borderRadius: '12px', cursor: 'pointer',
+    fontWeight: '700', fontSize: '0.9rem', boxShadow: '0 4px 14px rgba(168,85,247,0.35)',
+    fontFamily: 'inherit', display: 'flex', alignItems: 'center',
+  },
+  filtros: { display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' },
+  searchWrapper: {
+    display: 'flex', alignItems: 'center', gap: '0.6rem',
+    background: '#1a1a24', border: '1px solid #2a2a3a', borderRadius: '12px',
+    padding: '0.55rem 1rem', flex: 1, minWidth: '200px',
+  },
+  searchIcon: { color: '#8b8b9e', flexShrink: 0 },
+  searchInput: {
+    background: 'transparent', border: 'none', outline: 'none',
+    color: '#f1f1f3', fontSize: '0.9rem', width: '100%', fontFamily: 'inherit',
+  },
+  filterSelect: {
+    background: '#1a1a24', border: '1px solid #2a2a3a', borderRadius: '12px',
+    padding: '0.55rem 1rem', color: '#f1f1f3', fontSize: '0.88rem',
+    cursor: 'pointer', fontFamily: 'inherit', outline: 'none',
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+    gap: '1.25rem',
+  },
+  card: {
+    background: '#1a1a24', borderRadius: '18px', border: '1px solid #2a2a3a',
+    overflow: 'hidden', transition: 'border-color 0.2s',
+  },
+  cardImgWrapper: { position: 'relative', height: '160px', background: '#12121a' },
+  cardImg: { width: '100%', height: '100%', objectFit: 'cover' },
+  cardImgPlaceholder: {
+    width: '100%', height: '100%', display: 'flex', alignItems: 'center',
+    justifyContent: 'center', fontSize: '2.5rem', background: '#12121a',
+  },
+  categoriaBadge: {
+    position: 'absolute', top: '0.5rem', left: '0.5rem',
+    background: 'rgba(168,85,247,0.2)', color: '#a855f7',
+    border: '1px solid rgba(168,85,247,0.3)',
+    padding: '0.2rem 0.6rem', borderRadius: '20px', fontSize: '0.7rem', fontWeight: '800',
+  },
+  ocultoBadge: {
+    position: 'absolute', top: '0.5rem', right: '0.5rem',
+    background: 'rgba(239,68,68,0.15)', color: '#f87171',
+    border: '1px solid rgba(239,68,68,0.3)',
+    padding: '0.2rem 0.55rem', borderRadius: '20px', fontSize: '0.68rem', fontWeight: '700',
+  },
+  cardBody: { padding: '1rem' },
+  cardNombre: { fontSize: '0.95rem', fontWeight: '800', color: '#f1f1f3', margin: 0, marginBottom: '0.5rem' },
+  cardPrices: { display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.75rem' },
+  precioVenta: { fontSize: '1.1rem', fontWeight: '900', color: '#a855f7' },
+  precioCosto: { fontSize: '0.75rem', color: '#8b8b9e', fontWeight: '500' },
+  cardFooter: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  stockBadge: {
+    padding: '0.2rem 0.6rem', borderRadius: '8px', fontSize: '0.72rem', fontWeight: '700',
+  },
+  cardActions: { display: 'flex', gap: '0.35rem' },
+  btnIcon: {
+    background: '#12121a', border: '1px solid #2a2a3a', color: '#8b8b9e',
+    borderRadius: '8px', width: '30px', height: '30px', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  btnIconEdit: {
+    background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)',
+    color: '#a855f7', borderRadius: '8px', width: '30px', height: '30px',
+    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  btnIconDelete: {
+    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+    color: '#f87171', borderRadius: '8px', width: '30px', height: '30px',
+    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+};
+
+const modal = {
+  overlay: {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1rem',
+  },
+  container: {
+    background: '#1a1a24', borderRadius: '20px', width: '100%', maxWidth: '620px',
+    maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+    border: '1px solid #2a2a3a', boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+  },
+  header: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    padding: '1.25rem 1.5rem', borderBottom: '1px solid #2a2a3a',
+  },
+  titulo: { fontSize: '1.15rem', fontWeight: '700', color: '#f1f1f3' },
+  btnCerrar: {
+    background: '#12121a', border: '1px solid #2a2a3a', color: '#8b8b9e',
+    borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  body: { overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' },
+  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
+  label: {
+    display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#8b8b9e',
+    marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.08em',
+  },
+  input: {
+    width: '100%', padding: '0.65rem 0.9rem', borderRadius: '10px',
+    border: '1px solid #3a3a4a', fontSize: '0.9rem', boxSizing: 'border-box',
+    background: '#12121a', color: '#f1f1f3', fontFamily: 'inherit', outline: 'none',
+  },
+  acciones: { display: 'flex', gap: '0.75rem', marginTop: '0.25rem' },
+  btnSecundario: {
+    flex: 1, padding: '0.75rem', background: '#12121a', border: '1px solid #2a2a3a',
+    borderRadius: '10px', cursor: 'pointer', fontWeight: '600', color: '#8b8b9e', fontFamily: 'inherit',
+  },
+  btnPrimario: {
+    flex: 2, padding: '0.75rem', background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+    color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer',
+    fontWeight: '700', fontSize: '1rem', fontFamily: 'inherit',
+  },
 };

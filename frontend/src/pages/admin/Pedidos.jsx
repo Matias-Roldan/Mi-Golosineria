@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Search, Plus, X, Eye, Pencil, Filter } from 'lucide-react';
 import Sidebar from '../../components/admin/Sidebar';
 import { getPedidosAdmin, getDetallePedido, cambiarEstado, editarPedido } from '../../api/pedidosApi';
 import { registrarPedido } from '../../api/pedidosApi';
@@ -6,7 +8,21 @@ import { getProductosAdmin } from '../../api/productosApi';
 import { getClientes } from '../../api/clientesApi';
 
 const ESTADOS = ['pendiente', 'confirmado', 'entregado', 'cancelado'];
-const colorEstado = { pendiente: '#f59e0b', confirmado: '#3b82f6', entregado: '#10b981', cancelado: '#ef4444' };
+
+const estadoBadge = {
+  pendiente:  { bg: 'rgba(245,158,11,0.15)',  color: '#f59e0b',  border: 'rgba(245,158,11,0.3)'  },
+  confirmado: { bg: 'rgba(16,185,129,0.15)',  color: '#10b981',  border: 'rgba(16,185,129,0.3)'  },
+  entregado:  { bg: 'rgba(59,130,246,0.15)',  color: '#60a5fa',  border: 'rgba(59,130,246,0.3)'  },
+  cancelado:  { bg: 'rgba(239,68,68,0.15)',   color: '#f87171',  border: 'rgba(239,68,68,0.3)'   },
+};
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 18 },
+  visible: (i = 0) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.07, duration: 0.38, ease: 'easeOut' },
+  }),
+};
 
 // ── Modal Nuevo Pedido ──────────────────────────────────────────────
 function ModalNuevoPedido({ onCerrar, onCreado }) {
@@ -29,8 +45,7 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
     setBusqueda(texto);
     if (texto.length < 2) return setClientesFiltrados([]);
     const filtrados = clientes.filter(c =>
-      c.nombre.toLowerCase().includes(texto.toLowerCase()) ||
-      c.telefono.includes(texto)
+      c.nombre.toLowerCase().includes(texto.toLowerCase()) || c.telefono.includes(texto)
     );
     setClientesFiltrados(filtrados.slice(0, 5));
   };
@@ -82,7 +97,7 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
       <div style={modal.container}>
         <div style={modal.header}>
           <h3 style={modal.titulo}>🛒 Nuevo Pedido</h3>
-          <button style={modal.btnCerrar} onClick={onCerrar}>✕</button>
+          <button style={modal.btnCerrar} onClick={onCerrar}><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit} style={modal.body}>
           <div style={modal.seccion}>
@@ -99,7 +114,8 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
                   <div style={modal.dropdown}>
                     {clientesFiltrados.map(c => (
                       <div key={c.id} style={modal.dropdownItem} onClick={() => seleccionarCliente(c)}>
-                        <strong>{c.nombre}</strong> — {c.telefono}
+                        <strong style={{ color: '#f1f1f3' }}>{c.nombre}</strong>
+                        <span style={{ color: '#8b8b9e' }}> — {c.telefono}</span>
                       </div>
                     ))}
                   </div>
@@ -148,20 +164,20 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
               <p style={modal.seccionTitulo}>📋 Resumen</p>
               {items.map(i => (
                 <div key={i.id} style={modal.itemRow}>
-                  <span style={{ flex: 1, fontSize: '0.9rem' }}>{i.nombre}</span>
+                  <span style={{ flex: 1, fontSize: '0.9rem', color: '#e2e2ef' }}>{i.nombre}</span>
                   <div style={modal.cantControles}>
                     <button type="button" style={modal.btnCant} onClick={() => cambiarCantidad(i.id, i.cantidad - 1)}>−</button>
-                    <span style={{ minWidth: '20px', textAlign: 'center' }}>{i.cantidad}</span>
+                    <span style={{ minWidth: '20px', textAlign: 'center', color: '#f1f1f3' }}>{i.cantidad}</span>
                     <button type="button" style={modal.btnCant} onClick={() => cambiarCantidad(i.id, i.cantidad + 1)}>+</button>
                   </div>
-                  <span style={{ fontWeight: '700', color: '#7c3aed', minWidth: '80px', textAlign: 'right' }}>
+                  <span style={{ fontWeight: '700', color: '#a855f7', minWidth: '80px', textAlign: 'right' }}>
                     ${Number(i.precio * i.cantidad).toLocaleString('es-AR')}
                   </span>
                 </div>
               ))}
               <div style={modal.totalRow}>
-                <span style={{ fontWeight: '700' }}>Total</span>
-                <span style={{ fontWeight: '800', fontSize: '1.1rem', color: '#7c3aed' }}>
+                <span style={{ fontWeight: '700', color: '#f1f1f3' }}>Total</span>
+                <span style={{ fontWeight: '800', fontSize: '1.1rem', color: '#a855f7' }}>
                   ${Number(total).toLocaleString('es-AR')}
                 </span>
               </div>
@@ -211,20 +227,18 @@ function ModalEditarPedido({ pedido, onCerrar, onGuardado }) {
       <div style={{ ...modal.container, maxWidth: '480px' }}>
         <div style={modal.header}>
           <h3 style={modal.titulo}>✏️ Editar Pedido #{pedido.id}</h3>
-          <button style={modal.btnCerrar} onClick={onCerrar}>✕</button>
+          <button style={modal.btnCerrar} onClick={onCerrar}><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit} style={modal.body}>
           <div>
             <label style={modal.label}>Nombre cliente *</label>
             <input style={modal.input} value={form.nombre_cliente}
-              onChange={(e) => setForm({ ...form, nombre_cliente: e.target.value })}
-              required />
+              onChange={(e) => setForm({ ...form, nombre_cliente: e.target.value })} required />
           </div>
           <div>
             <label style={modal.label}>Teléfono *</label>
             <input style={modal.input} value={form.telefono}
-              onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-              required />
+              onChange={(e) => setForm({ ...form, telefono: e.target.value })} required />
           </div>
           <div>
             <label style={modal.label}>Notas</label>
@@ -235,7 +249,7 @@ function ModalEditarPedido({ pedido, onCerrar, onGuardado }) {
               placeholder="Dirección, aclaraciones..."
             />
           </div>
-          {error && <p style={{ color: '#ef4444', fontSize: '0.875rem' }}>{error}</p>}
+          {error && <p style={{ color: '#f87171', fontSize: '0.875rem' }}>{error}</p>}
           <div style={modal.acciones}>
             <button type="button" style={modal.btnSecundario} onClick={onCerrar}>Cancelar</button>
             <button type="submit" style={modal.btnPrimario} disabled={loading}>
@@ -255,6 +269,8 @@ export default function Pedidos() {
   const [pedidoSel, setPedidoSel] = useState(null);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [pedidoAEditar, setPedidoAEditar] = useState(null);
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('todos');
 
   const cargar = () => getPedidosAdmin().then(({ data }) => setPedidos(data));
   useEffect(() => { cargar(); }, []);
@@ -275,18 +291,50 @@ export default function Pedidos() {
     }
   };
 
+  const pedidosFiltrados = pedidos.filter(p => {
+    const matchBusqueda = !busqueda ||
+      p.nombreCliente?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      String(p.id).includes(busqueda);
+    const matchEstado = filtroEstado === 'todos' || p.estado === filtroEstado;
+    return matchBusqueda && matchEstado;
+  });
+
   return (
     <div style={styles.layout}>
       <Sidebar />
       <main style={styles.main}>
-        <div style={styles.header}>
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={0} style={styles.header}>
           <h1 style={styles.title}>🛒 Pedidos</h1>
           <button style={styles.btnPrimary} onClick={() => setMostrarModal(true)}>
-            + Nuevo pedido
+            <Plus size={16} style={{ marginRight: '0.4rem' }} />
+            Nuevo pedido
           </button>
-        </div>
+        </motion.div>
 
-        <div style={styles.content}>
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={1} style={styles.filtros}>
+          <div style={styles.searchWrapper}>
+            <Search size={16} style={styles.searchIcon} />
+            <input
+              style={styles.searchInput}
+              placeholder="Buscar por cliente o N° pedido..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+            />
+          </div>
+          <div style={styles.filterWrapper}>
+            <Filter size={15} style={{ color: '#8b8b9e', marginRight: '0.5rem', flexShrink: 0 }} />
+            <select
+              style={styles.filterSelect}
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+            >
+              <option value="todos">Todos los estados</option>
+              {ESTADOS.map(e => <option key={e} value={e}>{e.charAt(0).toUpperCase() + e.slice(1)}</option>)}
+            </select>
+          </div>
+        </motion.div>
+
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={2} style={styles.content}>
           <div style={styles.tableWrapper}>
             <table style={styles.table}>
               <thead>
@@ -301,53 +349,101 @@ export default function Pedidos() {
                 </tr>
               </thead>
               <tbody>
-                {pedidos.map((p) => (
-                  <tr key={p.id} style={styles.tr}>
-                    <td style={styles.td}>#{p.id}</td>
-                    <td style={styles.td}>{p.nombreCliente}</td>
-                    <td style={styles.td}>{p.telefono}</td>
-                    <td style={styles.td}>${p.total}</td>
-                    <td style={styles.td}>
-                      <select
-                        value={p.estado}
-                        onChange={(e) => handleEstado(p.id, e.target.value)}
-                        disabled={p.estado === 'cancelado'}
-                        style={{
-                          background: colorEstado[p.estado],
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          padding: '0.3rem 0.5rem',
-                          cursor: p.estado === 'cancelado' ? 'not-allowed' : 'pointer',
-                          fontWeight: '600',
-                          opacity: p.estado === 'cancelado' ? 0.7 : 1
-                        }}
-                      >
-                        {ESTADOS.map((e) => <option key={e} value={e}>{e}</option>)}
-                      </select>
-                    </td>
-                    <td style={styles.td}>{new Date(p.createdAt).toLocaleDateString('es-AR')}</td>
-                    <td style={styles.td}>
-                      <button style={styles.btnSmall} onClick={() => verDetalle(p)} title="Ver detalle">🔍</button>
-                      {p.estado !== 'entregado' && p.estado !== 'cancelado' && (
-                        <button style={styles.btnSmall} onClick={() => setPedidoAEditar(p)} title="Editar">✏️</button>
-                      )}
+                {pedidosFiltrados.map((p, idx) => {
+                  const badge = estadoBadge[p.estado] || estadoBadge.pendiente;
+                  return (
+                    <tr key={p.id} style={styles.tr}
+                      onMouseEnter={e => e.currentTarget.style.background = '#1e1e2e'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <td style={styles.td}>
+                        <span style={styles.pedidoId}>#{p.id}</span>
+                      </td>
+                      <td style={styles.td}>
+                        <span style={styles.clienteNombre}>{p.nombreCliente}</span>
+                      </td>
+                      <td style={{ ...styles.td, color: '#8b8b9e' }}>{p.telefono}</td>
+                      <td style={styles.td}>
+                        <span style={styles.totalText}>${Number(p.total).toLocaleString('es-AR')}</span>
+                      </td>
+                      <td style={styles.td}>
+                        <select
+                          value={p.estado}
+                          onChange={(e) => handleEstado(p.id, e.target.value)}
+                          disabled={p.estado === 'cancelado'}
+                          style={{
+                            background: badge.bg,
+                            color: badge.color,
+                            border: `1px solid ${badge.border}`,
+                            borderRadius: '8px',
+                            padding: '0.25rem 0.6rem',
+                            cursor: p.estado === 'cancelado' ? 'not-allowed' : 'pointer',
+                            fontWeight: '700',
+                            fontSize: '0.78rem',
+                            outline: 'none',
+                            fontFamily: 'inherit',
+                          }}
+                        >
+                          {ESTADOS.map((e) => <option key={e} value={e}>{e}</option>)}
+                        </select>
+                      </td>
+                      <td style={{ ...styles.td, color: '#8b8b9e' }}>
+                        {new Date(p.createdAt).toLocaleDateString('es-AR')}
+                      </td>
+                      <td style={styles.td}>
+                        <div style={styles.acciones}>
+                          <button style={styles.btnIcon} onClick={() => verDetalle(p)} title="Ver detalle">
+                            <Eye size={15} />
+                          </button>
+                          {p.estado !== 'entregado' && p.estado !== 'cancelado' && (
+                            <button style={styles.btnIcon} onClick={() => setPedidoAEditar(p)} title="Editar">
+                              <Pencil size={15} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {pedidosFiltrados.length === 0 && (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: '#8b8b9e' }}>
+                      No se encontraron pedidos
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
 
           {pedidoSel && (
-            <div style={styles.detalle}>
-              <h3>Pedido #{pedidoSel.id}</h3>
-              <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '1rem' }}>
-                {pedidoSel.nombreCliente} · {pedidoSel.telefono}
-              </p>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3 }}
+              style={styles.detalle}
+            >
+              <div style={styles.detalleHeader}>
+                <div>
+                  <h3 style={styles.detalleTitulo}>Pedido #{pedidoSel.id}</h3>
+                  <p style={styles.detalleCliente}>{pedidoSel.nombreCliente}</p>
+                  <p style={{ color: '#8b8b9e', fontSize: '0.82rem' }}>{pedidoSel.telefono}</p>
+                </div>
+                <div>
+                  {(() => {
+                    const b = estadoBadge[pedidoSel.estado] || estadoBadge.pendiente;
+                    return (
+                      <span style={{ background: b.bg, color: b.color, border: `1px solid ${b.border}`, borderRadius: '8px', padding: '0.25rem 0.65rem', fontSize: '0.75rem', fontWeight: '700' }}>
+                        {pedidoSel.estado}
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
                 <thead>
-                  <tr style={{ background: '#f9fafb' }}>
+                  <tr style={{ background: '#12121a' }}>
                     <th style={styles.th}>Producto</th>
                     <th style={styles.th}>Cant.</th>
                     <th style={styles.th}>Subtotal</th>
@@ -357,36 +453,31 @@ export default function Pedidos() {
                   {detalle?.map((item, i) => (
                     <tr key={i} style={styles.tr}>
                       <td style={styles.td}>{item.producto_nombre}</td>
-                      <td style={styles.td}>{item.cantidad}</td>
-                      <td style={styles.td}>${item.subtotal}</td>
+                      <td style={{ ...styles.td, color: '#8b8b9e' }}>{item.cantidad}</td>
+                      <td style={{ ...styles.td, color: '#a855f7', fontWeight: '700' }}>${item.subtotal}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <p style={{ fontWeight: '700', fontSize: '1.1rem', marginTop: '1rem', textAlign: 'right', color: '#7c3aed' }}>
-                Total: ${pedidoSel.total}
-              </p>
+              <div style={styles.detalleTotalRow}>
+                <span style={{ fontWeight: '700', color: '#e2e2ef' }}>Total</span>
+                <span style={{ fontWeight: '800', fontSize: '1.1rem', color: '#a855f7' }}>
+                  ${Number(pedidoSel.total).toLocaleString('es-AR')}
+                </span>
+              </div>
               <button style={styles.btnCerrar} onClick={() => { setDetalle(null); setPedidoSel(null); }}>
                 Cerrar
               </button>
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       </main>
 
       {mostrarModal && (
-        <ModalNuevoPedido
-          onCerrar={() => setMostrarModal(false)}
-          onCreado={cargar}
-        />
+        <ModalNuevoPedido onCerrar={() => setMostrarModal(false)} onCreado={cargar} />
       )}
-
       {pedidoAEditar && (
-        <ModalEditarPedido
-          pedido={pedidoAEditar}
-          onCerrar={() => setPedidoAEditar(null)}
-          onGuardado={cargar}
-        />
+        <ModalEditarPedido pedido={pedidoAEditar} onCerrar={() => setPedidoAEditar(null)} onGuardado={cargar} />
       )}
     </div>
   );
@@ -394,49 +485,156 @@ export default function Pedidos() {
 
 const styles = {
   layout: { display: 'flex' },
-  main: { marginLeft: '240px', padding: '2rem 2.5rem', flex: 1, background: '#f5f4ff', minHeight: '100vh', fontFamily: "'Nunito', system-ui, sans-serif" },
+  main: {
+    marginLeft: '240px', padding: '2rem 2.5rem', flex: 1,
+    background: '#0f0f13', minHeight: '100vh',
+    fontFamily: "'Nunito', system-ui, sans-serif", color: '#f1f1f3',
+  },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem' },
-  title: { fontSize: '1.85rem', fontWeight: '900', color: '#1e1333', letterSpacing: '-0.03em', margin: 0 },
-  btnPrimary: { background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: 'white', border: 'none', padding: '0.65rem 1.4rem', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', boxShadow: '0 4px 14px rgba(124,58,237,0.35)', fontFamily: 'inherit' },
-  btnSmall: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' },
+  title: { fontSize: '1.85rem', fontWeight: '900', color: '#f1f1f3', letterSpacing: '-0.03em', margin: 0 },
+  btnPrimary: {
+    background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: 'white',
+    border: 'none', padding: '0.65rem 1.4rem', borderRadius: '12px', cursor: 'pointer',
+    fontWeight: '700', fontSize: '0.9rem', boxShadow: '0 4px 14px rgba(168,85,247,0.35)',
+    fontFamily: 'inherit', display: 'flex', alignItems: 'center',
+  },
+  filtros: { display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' },
+  searchWrapper: {
+    display: 'flex', alignItems: 'center', gap: '0.6rem',
+    background: '#1a1a24', border: '1px solid #2a2a3a', borderRadius: '12px',
+    padding: '0.55rem 1rem', flex: 1, minWidth: '220px',
+  },
+  searchIcon: { color: '#8b8b9e', flexShrink: 0 },
+  searchInput: {
+    background: 'transparent', border: 'none', outline: 'none',
+    color: '#f1f1f3', fontSize: '0.9rem', width: '100%', fontFamily: 'inherit',
+  },
+  filterWrapper: {
+    display: 'flex', alignItems: 'center',
+    background: '#1a1a24', border: '1px solid #2a2a3a', borderRadius: '12px',
+    padding: '0.55rem 1rem',
+  },
+  filterSelect: {
+    background: 'transparent', border: 'none', outline: 'none',
+    color: '#f1f1f3', fontSize: '0.88rem', cursor: 'pointer', fontFamily: 'inherit',
+  },
   content: { display: 'flex', gap: '1.5rem', alignItems: 'flex-start' },
-  tableWrapper: { flex: 1, background: 'white', borderRadius: '20px', overflow: 'hidden', border: '1px solid #ede9fe', boxShadow: '0 1px 6px rgba(109,40,217,0.06)' },
+  tableWrapper: {
+    flex: 1, background: '#1a1a24', borderRadius: '20px', overflow: 'hidden',
+    border: '1px solid #2a2a3a',
+  },
   table: { width: '100%', borderCollapse: 'collapse' },
-  th: { padding: '0.875rem 1.25rem', textAlign: 'left', fontWeight: '700', color: '#9ca3af', fontSize: '0.68rem', background: '#faf9ff', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid #ede9fe' },
-  tr: { borderBottom: '1px solid #f5f3ff' },
-  td: { padding: '0.875rem 1.25rem', fontSize: '0.88rem', color: '#1e1333', fontWeight: '500' },
-  detalle: { width: '320px', background: 'white', borderRadius: '20px', padding: '1.5rem', border: '1px solid #ede9fe', boxShadow: '0 1px 6px rgba(109,40,217,0.06)' },
-  btnCerrar: { marginTop: '1rem', background: '#f5f3ff', border: '1px solid #ede9fe', color: '#7c3aed', padding: '0.6rem 1rem', borderRadius: '10px', cursor: 'pointer', width: '100%', fontWeight: '700', fontFamily: 'inherit', fontSize: '0.875rem' },
+  th: {
+    padding: '0.875rem 1.25rem', textAlign: 'left', fontWeight: '700',
+    color: '#8b8b9e', fontSize: '0.68rem', background: '#12121a',
+    textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid #2a2a3a',
+  },
+  tr: { borderBottom: '1px solid #2a2a3a', transition: 'background 0.15s' },
+  td: { padding: '0.875rem 1.25rem', fontSize: '0.88rem', color: '#e2e2ef', fontWeight: '500' },
+  pedidoId: { fontWeight: '800', color: '#a855f7' },
+  clienteNombre: { fontWeight: '700', color: '#f1f1f3' },
+  totalText: { fontWeight: '700', color: '#10b981' },
+  acciones: { display: 'flex', gap: '0.5rem' },
+  btnIcon: {
+    background: '#12121a', border: '1px solid #2a2a3a', color: '#8b8b9e',
+    borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    transition: 'color 0.15s, border-color 0.15s',
+  },
+  detalle: {
+    width: '320px', background: '#1a1a24', borderRadius: '20px',
+    padding: '1.5rem', border: '1px solid #2a2a3a', flexShrink: 0,
+  },
+  detalleHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
+  detalleTitulo: { fontSize: '1.1rem', fontWeight: '800', color: '#f1f1f3', margin: 0, marginBottom: '0.25rem' },
+  detalleCliente: { color: '#e2e2ef', fontSize: '0.9rem', fontWeight: '600', margin: 0 },
+  detalleTotalRow: {
+    display: 'flex', justifyContent: 'space-between', paddingTop: '0.875rem',
+    marginTop: '0.5rem', borderTop: '1px solid #2a2a3a',
+  },
+  btnCerrar: {
+    marginTop: '1rem', background: '#12121a', border: '1px solid #2a2a3a',
+    color: '#a855f7', padding: '0.6rem 1rem', borderRadius: '10px', cursor: 'pointer',
+    width: '100%', fontWeight: '700', fontFamily: 'inherit', fontSize: '0.875rem',
+  },
 };
 
 const modal = {
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1rem' },
-  container: { background: 'white', borderRadius: '14px', width: '100%', maxWidth: '680px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid #e5e7eb' },
-  titulo: { fontSize: '1.2rem', fontWeight: '700', color: '#1f2937' },
-  btnCerrar: { background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#6b7280' },
+  overlay: {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1rem',
+  },
+  container: {
+    background: '#1a1a24', borderRadius: '20px', width: '100%', maxWidth: '680px',
+    maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+    border: '1px solid #2a2a3a', boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+  },
+  header: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    padding: '1.25rem 1.5rem', borderBottom: '1px solid #2a2a3a',
+  },
+  titulo: { fontSize: '1.2rem', fontWeight: '700', color: '#f1f1f3' },
+  btnCerrar: {
+    background: '#12121a', border: '1px solid #2a2a3a', color: '#8b8b9e',
+    borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
   body: { overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' },
-  seccion: { background: '#f9fafb', borderRadius: '10px', padding: '1rem' },
-  seccionTitulo: { fontWeight: '700', color: '#374151', marginBottom: '0.75rem', fontSize: '0.95rem' },
+  seccion: { background: '#12121a', borderRadius: '12px', padding: '1rem', border: '1px solid #2a2a3a' },
+  seccionTitulo: { fontWeight: '700', color: '#e2e2ef', marginBottom: '0.75rem', fontSize: '0.95rem' },
   tabs: { display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' },
-  tab: { padding: '0.35rem 0.9rem', borderRadius: '20px', border: '1px solid #d1d5db', background: 'white', cursor: 'pointer', fontSize: '0.85rem', color: '#374151' },
+  tab: {
+    padding: '0.35rem 0.9rem', borderRadius: '20px', border: '1px solid #3a3a4a',
+    background: '#1a1a24', cursor: 'pointer', fontSize: '0.85rem', color: '#8b8b9e', fontFamily: 'inherit',
+  },
   tabActivo: { background: '#7c3aed', color: 'white', border: '1px solid #7c3aed', fontWeight: '600' },
   grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' },
-  label: { display: 'block', fontSize: '0.82rem', fontWeight: '600', color: '#374151', marginBottom: '0.25rem' },
-  input: { width: '100%', padding: '0.55rem 0.8rem', borderRadius: '7px', border: '1px solid #d1d5db', fontSize: '0.9rem', boxSizing: 'border-box', background: 'white' },
-  dropdown: { position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #d1d5db', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10 },
-  dropdownItem: { padding: '0.65rem 1rem', cursor: 'pointer', fontSize: '0.88rem', borderBottom: '1px solid #f3f4f6' },
+  label: { display: 'block', fontSize: '0.82rem', fontWeight: '600', color: '#8b8b9e', marginBottom: '0.25rem' },
+  input: {
+    width: '100%', padding: '0.6rem 0.85rem', borderRadius: '10px',
+    border: '1px solid #3a3a4a', fontSize: '0.9rem', boxSizing: 'border-box',
+    background: '#1a1a24', color: '#f1f1f3', fontFamily: 'inherit', outline: 'none',
+  },
+  dropdown: {
+    position: 'absolute', top: '100%', left: 0, right: 0,
+    background: '#1a1a24', border: '1px solid #3a3a4a', borderRadius: '10px',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 10,
+  },
+  dropdownItem: {
+    padding: '0.65rem 1rem', cursor: 'pointer', fontSize: '0.88rem',
+    borderBottom: '1px solid #2a2a3a', color: '#e2e2ef',
+  },
   productosGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto' },
-  productoItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', borderRadius: '8px', padding: '0.6rem 0.8rem', border: '1px solid #e5e7eb' },
-  productoNombre: { fontSize: '0.82rem', fontWeight: '600', color: '#1f2937' },
-  productoPrecio: { fontSize: '0.78rem', color: '#7c3aed', fontWeight: '600' },
-  btnAgregar: { background: '#7c3aed', color: 'white', border: 'none', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', fontSize: '1.1rem', fontWeight: '700' },
-  itemRow: { display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid #e5e7eb' },
+  productoItem: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    background: '#1a1a24', borderRadius: '8px', padding: '0.6rem 0.8rem', border: '1px solid #2a2a3a',
+  },
+  productoNombre: { fontSize: '0.82rem', fontWeight: '600', color: '#e2e2ef', margin: 0 },
+  productoPrecio: { fontSize: '0.78rem', color: '#a855f7', fontWeight: '600', margin: 0, marginTop: '2px' },
+  btnAgregar: {
+    background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: 'white',
+    border: 'none', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer',
+    fontSize: '1.1rem', fontWeight: '700',
+  },
+  itemRow: {
+    display: 'flex', alignItems: 'center', gap: '0.75rem',
+    padding: '0.5rem 0', borderBottom: '1px solid #2a2a3a',
+  },
   cantControles: { display: 'flex', alignItems: 'center', gap: '0.4rem' },
-  btnCant: { width: '26px', height: '26px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#f9fafb', cursor: 'pointer', fontWeight: '700' },
+  btnCant: {
+    width: '26px', height: '26px', borderRadius: '6px', border: '1px solid #3a3a4a',
+    background: '#1a1a24', cursor: 'pointer', fontWeight: '700', color: '#e2e2ef', fontFamily: 'inherit',
+  },
   totalRow: { display: 'flex', justifyContent: 'space-between', paddingTop: '0.75rem', marginTop: '0.25rem' },
-  error: { color: '#ef4444', fontSize: '0.875rem', textAlign: 'center' },
+  error: { color: '#f87171', fontSize: '0.875rem', textAlign: 'center' },
   acciones: { display: 'flex', gap: '0.75rem' },
-  btnSecundario: { flex: 1, padding: '0.75rem', background: '#e5e7eb', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
-  btnPrimario: { flex: 2, padding: '0.75rem', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '1rem' },
+  btnSecundario: {
+    flex: 1, padding: '0.75rem', background: '#12121a', border: '1px solid #2a2a3a',
+    borderRadius: '10px', cursor: 'pointer', fontWeight: '600', color: '#8b8b9e', fontFamily: 'inherit',
+  },
+  btnPrimario: {
+    flex: 2, padding: '0.75rem', background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+    color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer',
+    fontWeight: '700', fontSize: '1rem', fontFamily: 'inherit',
+  },
 };
