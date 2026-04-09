@@ -1,34 +1,64 @@
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import {
+  BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+} from 'recharts';
 import Sidebar from '../../components/admin/Sidebar';
 import StatsCard from '../../components/admin/StatsCard';
-import { getKpis, getVentasDiarias, getTopProductos, getHeatmap, getAnalisisPareto, getAnalisisRFM, getSaludStock, getCrossSelling } from '../../api/adminApi';
+import {
+  getKpis, getVentasDiarias, getTopProductos, getHeatmap,
+  getAnalisisPareto, getAnalisisRFM, getSaludStock, getCrossSelling,
+} from '../../api/adminApi';
 
-// ─── Skeleton ────────────────────────────────────────────────────────
+// ─── Animation variant ────────────────────────────────────────────────
+const fadeUp = {
+  hidden: { opacity: 0, y: 18 },
+  visible: (i = 0) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.07, duration: 0.38, ease: 'easeOut' },
+  }),
+};
+
+// ─── Skeleton ─────────────────────────────────────────────────────────
 function Skeleton() {
   return (
     <>
-      <style>{`
-        @keyframes shimmer {
-          0%   { background-position: -400px 0; }
-          100% { background-position:  400px 0; }
-        }
-      `}</style>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} style={{ background: 'white', borderRadius: '18px', padding: '1.4rem 1.5rem', height: '88px', border: '1px solid #ede9fe', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(90deg, #f3e8ff 25%, #ede9fe 50%, #f3e8ff 75%)', backgroundSize: '400px 100%', animation: 'shimmer 1.4s ease infinite', flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ height: '10px', width: '60%', borderRadius: '4px', background: 'linear-gradient(90deg, #f3e8ff 25%, #ede9fe 50%, #f3e8ff 75%)', backgroundSize: '400px 100%', animation: 'shimmer 1.4s ease infinite', marginBottom: '8px' }} />
-              <div style={{ height: '22px', width: '80%', borderRadius: '4px', background: 'linear-gradient(90deg, #f3e8ff 25%, #ede9fe 50%, #f3e8ff 75%)', backgroundSize: '400px 100%', animation: 'shimmer 1.4s ease infinite' }} />
-            </div>
-          </div>
+      <style>{`@keyframes dp { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} style={{ background: '#1a1a24', borderRadius: '16px', height: '110px', border: '1px solid #2a2a3a', animation: 'dp 1.5s ease-in-out infinite' }} />
         ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1.5rem', marginBottom: '1.5rem' }}>
+        <div style={{ background: '#1a1a24', borderRadius: '16px', height: '280px', border: '1px solid #2a2a3a', animation: 'dp 1.5s ease-in-out infinite' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {[140, 120].map((h, i) => (
+            <div key={i} style={{ background: '#1a1a24', borderRadius: '16px', height: `${h}px`, border: '1px solid #2a2a3a', animation: 'dp 1.5s ease-in-out infinite' }} />
+          ))}
+        </div>
       </div>
     </>
   );
 }
 
-// ════════════════════════════════════════════════════════════════════
+// ─── Custom Bar Tooltip ───────────────────────────────────────────────
+function BarTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  const val = payload[0].value;
+  const formatted = new Intl.NumberFormat('es-AR', {
+    style: 'currency', currency: 'ARS', maximumFractionDigits: 0,
+  }).format(val);
+  return (
+    <div style={{ background: '#1a1a24', border: '1px solid #3a3a4a', borderRadius: '10px', padding: '0.5rem 0.9rem' }}>
+      <div style={{ color: '#8b8b9e', fontSize: '0.62rem', fontWeight: '600', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        Día {label}
+      </div>
+      <div style={{ color: '#c084fc', fontWeight: '800', fontSize: '0.9rem' }}>{formatted}</div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════
 export default function Dashboard() {
   const [kpis, setKpis]               = useState(null);
   const [ventas, setVentas]           = useState([]);
@@ -39,7 +69,6 @@ export default function Dashboard() {
   const [stock, setStock]             = useState([]);
   const [crossSelling, setCrossSelling] = useState([]);
   const [loading, setLoading]         = useState(true);
-  const [hovBar, setHovBar]           = useState(null);
 
   useEffect(() => {
     Promise.all([
@@ -62,211 +91,260 @@ export default function Dashboard() {
   const formatPeso = (n) => {
     const num = parseFloat(n);
     if (isNaN(num)) return '$0';
-    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(num);
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency', currency: 'ARS', maximumFractionDigits: 0,
+    }).format(num);
   };
 
-  const maxVenta = Math.max(...ventas.map((v) => parseFloat(v.ingresos) || 0), 1);
   const maxUnidades = Math.max(...topProductos.map((p) => parseFloat(p.unidades) || 0), 1);
+  const maxStock    = Math.max(...stock.map((s) => parseFloat(s.stock_actual) || 0), 1);
 
+  // Greeting
+  const hora = new Date().getHours();
+  const saludo = hora < 12 ? 'Buen día' : hora < 18 ? 'Buenas tardes' : 'Buenas noches';
   const hoy = new Date().toLocaleDateString('es-AR', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
 
-  const rankStyle = (i) => {
-    if (i === 0) return { bg: '#fef3c7', color: '#d97706' };
-    if (i === 1) return { bg: '#f3f4f6', color: '#6b7280' };
-    if (i === 2) return { bg: '#fef9c3', color: '#92400e' };
-    return { bg: '#f5f3ff', color: '#7c3aed' };
-  };
+  // Sparkline data – last 10 days of ventas
+  const sparkData = ventas.slice(-10).map((v) => ({ v: parseFloat(v.ingresos) || 0 }));
+
+  // Bar chart data
+  const chartData = ventas.map((v) => ({
+    dia: String(new Date(v.fecha).getDate()),
+    ingresos: parseFloat(v.ingresos) || 0,
+  }));
 
   return (
     <div style={D.layout}>
+      <style>{`
+        #dash-search::placeholder { color: #4a4a5e; }
+        #dash-search:focus { outline: none; }
+      `}</style>
+
       <Sidebar />
+
       <main style={D.main}>
 
         {/* ── Header ── */}
-        <div style={D.header}>
+        <motion.div style={D.header} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
           <div>
-            <h1 style={D.title}>Dashboard</h1>
-            <p style={D.subtitle}>{hoy} · Resumen del mes actual</p>
+            <h1 style={D.title}>{saludo}, Administrador 👋</h1>
+            <p style={D.subtitle}>{hoy}</p>
           </div>
-        </div>
+          <div style={D.searchBox}>
+            <span style={{ fontSize: '0.9rem' }}>🔍</span>
+            <input id="dash-search" style={D.searchInput} placeholder="Buscar..." />
+          </div>
+        </motion.div>
 
         {loading ? (
           <Skeleton />
         ) : (
           <>
-            {/* ── KPIs ── */}
+            {/* ── KPI Cards ── */}
             <div style={D.kpiGrid}>
-              <StatsCard icon="💰" label="Ventas del mes"       value={formatPeso(kpis?.total_ventas_mes)}  color="#10b981" />
-              <StatsCard icon="🛒" label="Pedidos del mes"      value={kpis?.cantidad_pedidos_mes ?? '0'}   color="#7c3aed" />
-              <StatsCard icon="🎯" label="Ticket promedio"      value={formatPeso(kpis?.ticket_promedio)}   color="#f59e0b" />
-              <StatsCard icon="👥" label="Clientes únicos"      value={kpis?.clientes_unicos ?? '0'}        color="#3b82f6" />
-              <StatsCard icon="🏆" label="Producto más vendido" value={kpis?.producto_mas_vendido ?? '—'}   color="#ef4444" />
-              <StatsCard icon="💵" label="Mayor ingreso"        value={kpis?.producto_mas_ingresos ?? '—'}  color="#06b6d4" />
+              {[
+                { icon: '💰', label: 'Ventas del mes',  value: formatPeso(kpis?.total_ventas_mes), color: '#a855f7' },
+                { icon: '🛒', label: 'Pedidos',         value: String(kpis?.cantidad_pedidos_mes ?? '0'), color: '#3b82f6' },
+                { icon: '🎯', label: 'Ticket promedio', value: formatPeso(kpis?.ticket_promedio),  color: '#10b981' },
+                { icon: '👥', label: 'Clientes únicos', value: String(kpis?.clientes_unicos ?? '0'), color: '#f59e0b' },
+              ].map((card, i) => (
+                <motion.div key={card.label} custom={i + 1} initial="hidden" animate="visible" variants={fadeUp}>
+                  <StatsCard {...card} sparkData={sparkData} />
+                </motion.div>
+              ))}
             </div>
 
-            {/* ── Bar chart ── */}
-            {ventas.length > 0 && (
-              <div style={D.card}>
-                <div style={D.cardHeader}>
-                  <div>
-                    <h2 style={D.cardTitle}>Ventas últimos 30 días</h2>
-                    <p style={D.cardSub}>Ingresos diarios en ARS</p>
-                  </div>
-                  <div style={D.legend}>
-                    <span style={D.legendDot} />
-                    <span style={D.legendLabel}>Ingresos</span>
-                  </div>
-                </div>
+            {/* ── Main row: chart + side cards ── */}
+            <div style={D.mainRow}>
 
-                {/* Bars + grid */}
-                <div style={{ position: 'relative' }}>
-                  {/* Horizontal grid lines */}
-                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: '22px', display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', pointerEvents: 'none' }}>
-                    <div style={D.gridLine} />
-                    <div style={D.gridLine} />
-                    <div style={D.gridLine} />
+              {/* Bar chart */}
+              {ventas.length > 0 && (
+                <motion.div style={D.card} custom={5} initial="hidden" animate="visible" variants={fadeUp}>
+                  <div style={D.cardHeader}>
+                    <div>
+                      <h2 style={D.cardTitle}>Ventas últimos 30 días</h2>
+                      <p style={D.cardSub}>Ingresos diarios en ARS</p>
+                    </div>
+                    <div style={D.legendChip}>
+                      <span style={D.legendDot} />
+                      <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#c084fc' }}>Ingresos</span>
+                    </div>
                   </div>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={chartData} margin={{ top: 0, right: 4, left: -20, bottom: 0 }} barCategoryGap="35%">
+                      <defs>
+                        <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%"   stopColor="#c084fc" />
+                          <stop offset="100%" stopColor="#7c3aed" />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid vertical={false} stroke="#1e1e2e" strokeDasharray="4 4" />
+                      <XAxis
+                        dataKey="dia"
+                        tick={{ fill: '#8b8b9e', fontSize: 10, fontWeight: 600 }}
+                        axisLine={false}
+                        tickLine={false}
+                        interval={4}
+                      />
+                      <Tooltip content={<BarTooltip />} cursor={{ fill: 'rgba(168,85,247,0.07)' }} />
+                      <Bar dataKey="ingresos" radius={[4, 4, 0, 0]} fill="url(#barGrad)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </motion.div>
+              )}
 
-                  {/* Bars */}
-                  <div style={{ height: '190px', display: 'flex', alignItems: 'flex-end', gap: '3px', position: 'relative', zIndex: 1 }}>
-                    {ventas.map((v, i) => {
-                      const pct = (parseFloat(v.ingresos) / maxVenta) * 100;
-                      const hov = hovBar === i;
-                      return (
-                        <div
-                          key={i}
-                          style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', position: 'relative', cursor: 'default' }}
-                          onMouseEnter={() => setHovBar(i)}
-                          onMouseLeave={() => setHovBar(null)}
-                        >
-                          {hov && (
-                            <div style={D.tooltip}>
-                              <span style={D.tooltipVal}>{formatPeso(v.ingresos)}</span>
-                              <span style={D.tooltipDate}>
-                                {new Date(v.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
-                              </span>
-                            </div>
-                          )}
-                          <div style={{
-                            width: '100%',
-                            height: `${Math.max(pct, 2)}%`,
-                            borderRadius: '5px 5px 0 0',
-                            background: hov
-                              ? 'linear-gradient(to top, #6d28d9, #e879f9)'
-                              : 'linear-gradient(to top, #a855f7, #c084fc)',
-                            boxShadow: hov ? '0 0 10px rgba(168,85,247,0.45)' : 'none',
-                            transition: 'all 0.18s ease',
-                          }} />
+              {/* Side column */}
+              <div style={D.sideColumn}>
+
+                {/* Top vendido */}
+                {topProductos.length > 0 && (
+                  <motion.div style={D.card} custom={6} initial="hidden" animate="visible" variants={fadeUp}>
+                    <h2 style={{ ...D.cardTitle, marginBottom: '0.2rem' }}>🏆 Top Vendido</h2>
+                    <p style={{ ...D.cardSub, marginBottom: '1rem' }}>Producto #1 del mes</p>
+
+                    <div style={D.heroCard}>
+                      <div style={D.heroRank}>1</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: '800', color: '#fff', marginBottom: '0.25rem', wordBreak: 'break-word', lineHeight: 1.3 }}>
+                          {topProductos[0].nombre}
                         </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* X-axis labels */}
-                  <div style={{ height: '22px', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                    {ventas.map((v, i) => (
-                      <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: '0.55rem', color: '#c4b5fd', fontWeight: '600' }}>
-                        {new Date(v.fecha).getDate()}
+                        <div style={{ fontSize: '0.72rem', color: '#8b8b9e' }}>
+                          {topProductos[0].unidades} unidades vendidas
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontSize: '1rem', fontWeight: '900', color: '#c084fc' }}>
+                          {formatPeso(topProductos[0].ingresos)}
+                        </div>
+                      </div>
+                    </div>
 
-            {/* ── Salud de stock ── */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.85rem' }}>
+                      {topProductos.slice(1, 4).map((p, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <span style={{ fontSize: '0.68rem', color: '#4a4a5e', fontWeight: '700', width: '14px', textAlign: 'right' }}>{i + 2}</span>
+                          <span style={{ flex: 1, fontSize: '0.78rem', color: '#c4c4d4', fontWeight: '600', wordBreak: 'break-word' }}>{p.nombre}</span>
+                          <span style={{ fontSize: '0.72rem', color: '#a855f7', fontWeight: '700', flexShrink: 0 }}>{p.unidades} ud.</span>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Indicadores clave */}
+                {kpis && (
+                  <motion.div style={D.card} custom={7} initial="hidden" animate="visible" variants={fadeUp}>
+                    <h2 style={{ ...D.cardTitle, marginBottom: '0.2rem' }}>📊 Indicadores</h2>
+                    <p style={{ ...D.cardSub, marginBottom: '1rem' }}>Productos destacados</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                      {[
+                        { label: '⭐ Mayor ingreso',  value: kpis?.producto_mas_ingresos ?? '—', color: '#f59e0b' },
+                        { label: '🔥 Más vendido',    value: kpis?.producto_mas_vendido ?? '—',  color: '#a855f7' },
+                      ].map((item, i) => (
+                        <div key={i} style={D.miniCard}>
+                          <div style={{ fontSize: '0.6rem', color: '#8b8b9e', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>
+                            {item.label}
+                          </div>
+                          <div style={{ fontSize: '0.82rem', fontWeight: '800', color: item.color, wordBreak: 'break-word', lineHeight: 1.3 }}>
+                            {item.value}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </div>
+
+            {/* ── Salud del stock ── */}
             {stock.length > 0 && (
-              <div style={D.card}>
+              <motion.div style={D.cardFull} custom={8} initial="hidden" animate="visible" variants={fadeUp}>
                 <div style={D.cardHeader}>
                   <div>
                     <h2 style={D.cardTitle}>Salud del Stock</h2>
                     <p style={D.cardSub}>Estado actual de inventario por producto</p>
                   </div>
                 </div>
-                <div style={D.topList}>
+                <div style={D.list}>
                   {stock.map((p, i) => {
                     const dias = parseFloat(p.dias_de_invetario_restante) || 0;
-                    const statusColor = dias < 7 ? '#ef4444' : dias < 14 ? '#f59e0b' : '#10b981';
-                    const statusLabel = dias < 7 ? 'crítico' : dias < 14 ? 'bajo' : 'ok';
+                    const sc = dias < 7 ? '#ef4444' : dias < 14 ? '#f59e0b' : '#10b981';
+                    const sl = dias < 7 ? 'crítico' : dias < 14 ? 'bajo' : 'ok';
                     const stockActual = parseFloat(p.stock_actual) || 0;
-                    const maxStock = Math.max(...stock.map((s) => parseFloat(s.stock_actual) || 0), 1);
                     const barPct = Math.min((stockActual / maxStock) * 100, 100);
                     return (
-                      <div key={i} style={D.topRow}>
-                        <div style={{ ...D.rankBadge, background: `${statusColor}18`, color: statusColor, fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase' }}>
-                          {statusLabel}
+                      <div key={i} style={D.row}>
+                        <div style={{ ...D.badge, background: `${sc}18`, color: sc, fontSize: '0.62rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          {sl}
                         </div>
-                        <div style={D.topMeta}>
-                          <div style={D.topName}>{p.nombre}</div>
-                          <div style={D.topBarTrack}>
-                            <div style={{ ...D.topBarFill, background: `linear-gradient(90deg, ${statusColor}88, ${statusColor})`, width: `${barPct}%` }} />
+                        <div style={D.meta}>
+                          <div style={D.name}>{p.nombre}</div>
+                          <div style={D.track}>
+                            <div style={{ ...D.fill, background: `linear-gradient(90deg, ${sc}70, ${sc})`, width: `${barPct}%` }} />
                           </div>
-                          <div style={{ fontSize: '0.72rem', color: '#9ca3af', fontWeight: '500', marginTop: '0.25rem' }}>
-                            Venta diaria promedio: <strong style={{ color: '#7c3aed' }}>{parseFloat(p.venta_diaria_promedio).toFixed(1)} ud.</strong>
+                          <div style={{ fontSize: '0.67rem', color: '#8b8b9e', marginTop: '0.25rem' }}>
+                            Venta diaria: <strong style={{ color: '#a855f7' }}>{parseFloat(p.venta_diaria_promedio).toFixed(1)} ud.</strong>
                           </div>
                         </div>
-                        <div style={D.topStats}>
-                          <span style={{ fontSize: '1.3rem', fontWeight: '900', color: statusColor, lineHeight: 1 }}>
-                            {stockActual}
-                          </span>
-                          <span style={{ fontSize: '0.72rem', fontWeight: '600', color: statusColor, opacity: 0.75, whiteSpace: 'nowrap' }}>ud. en stock</span>
-                          <span style={{ fontSize: '0.75rem', fontWeight: '700', color: statusColor, marginTop: '0.2rem', whiteSpace: 'nowrap' }}>
-                            {dias.toFixed(0)} días
-                          </span>
+                        <div style={D.stats}>
+                          <span style={{ fontSize: '1.25rem', fontWeight: '900', color: sc, lineHeight: 1 }}>{stockActual}</span>
+                          <span style={{ fontSize: '0.62rem', color: sc, opacity: 0.8 }}>ud. en stock</span>
+                          <span style={{ fontSize: '0.7rem', fontWeight: '700', color: sc }}>{dias.toFixed(0)} días</span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* ── Análisis Pareto ── */}
             {pareto.length > 0 && (
-              <div style={D.card}>
+              <motion.div style={D.cardFull} custom={9} initial="hidden" animate="visible" variants={fadeUp}>
                 <div style={D.cardHeader}>
                   <div>
                     <h2 style={D.cardTitle}>Análisis Pareto</h2>
                     <p style={D.cardSub}>Productos que concentran el 80% de los ingresos</p>
                   </div>
                 </div>
-                <div style={D.topList}>
+                <div style={D.list}>
                   {pareto.map((p, i) => {
-                    const pctAcum = parseFloat(p.porcentaje_acumulado) || 0;
+                    const pctAcum   = parseFloat(p.porcentaje_acumulado) || 0;
                     const pctContrib = parseFloat(p.porcentaje_contribucion) || 0;
                     const cat = p.categoria_pareto ?? 'C';
-                    const catColor = cat === 'A' ? '#7c3aed' : cat === 'B' ? '#f59e0b' : '#9ca3af';
+                    const cc  = cat === 'A' ? '#a855f7' : cat === 'B' ? '#f59e0b' : '#6b7280';
+                    const barGrad = cat === 'A'
+                      ? 'linear-gradient(90deg, #a855f7, #e879f9)'
+                      : cat === 'B'
+                      ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
+                      : 'linear-gradient(90deg, #4b5563, #6b7280)';
                     return (
-                      <div key={i} style={D.topRow}>
-                        <div style={{ ...D.rankBadge, background: `${catColor}18`, color: catColor, fontSize: '0.9rem', fontWeight: '900' }}>
-                          {cat}
-                        </div>
-                        <div style={D.topMeta}>
-                          <div style={D.topName}>{p.nombre}</div>
-                          <div style={D.topBarTrack}>
-                            <div style={{ ...D.topBarFill, width: `${pctAcum}%`, background: cat === 'A' ? 'linear-gradient(90deg, #a855f7, #e879f9)' : cat === 'B' ? 'linear-gradient(90deg, #fbbf24, #f59e0b)' : 'linear-gradient(90deg, #d1d5db, #9ca3af)' }} />
+                      <div key={i} style={D.row}>
+                        <div style={{ ...D.badge, background: `${cc}18`, color: cc, fontSize: '0.9rem', fontWeight: '900' }}>{cat}</div>
+                        <div style={D.meta}>
+                          <div style={D.name}>{p.nombre}</div>
+                          <div style={D.track}>
+                            <div style={{ ...D.fill, width: `${pctAcum}%`, background: barGrad }} />
                           </div>
-                          <div style={{ fontSize: '0.68rem', fontWeight: '600', color: catColor, marginTop: '0.3rem', display: 'flex', gap: '0.4rem', whiteSpace: 'nowrap' }}>
-                            <span>{pctContrib.toFixed(1)}% propio</span>
-                            <span>·</span>
-                            <span>{pctAcum.toFixed(1)}% acum.</span>
+                          <div style={{ fontSize: '0.64rem', fontWeight: '600', color: cc, marginTop: '0.25rem' }}>
+                            {pctContrib.toFixed(1)}% propio · {pctAcum.toFixed(1)}% acum.
                           </div>
                         </div>
-                        <div style={D.topStats}>
-                          <span style={D.topUnidades}>{formatPeso(p.ingresos_producto)}</span>
+                        <div style={D.stats}>
+                          <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#fff', whiteSpace: 'nowrap' }}>{formatPeso(p.ingresos_producto)}</span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* ── Segmentos RFM ── */}
             {rfm.length > 0 && (
-              <div style={D.card}>
+              <motion.div style={D.cardFull} custom={10} initial="hidden" animate="visible" variants={fadeUp}>
                 <div style={D.cardHeader}>
                   <div>
                     <h2 style={D.cardTitle}>Segmentos de Clientes (RFM)</h2>
@@ -278,7 +356,13 @@ export default function Dashboard() {
                     <thead>
                       <tr>
                         {['Nombre', 'Teléfono', 'Recencia (días)', 'Frecuencia', 'Valor monetario', 'Segmento'].map((col) => (
-                          <th key={col} style={{ padding: '0.5rem 0.75rem', color: '#9ca3af', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', borderBottom: '1px solid #ede9fe', whiteSpace: 'nowrap' }}>
+                          <th key={col} style={{
+                            padding: '0.5rem 0.75rem',
+                            color: '#8b8b9e', fontWeight: '700',
+                            textTransform: 'uppercase', letterSpacing: '0.05em',
+                            textAlign: 'left', borderBottom: '1px solid #2a2a3a',
+                            whiteSpace: 'nowrap', fontSize: '0.6rem',
+                          }}>
                             {col}
                           </th>
                         ))}
@@ -287,16 +371,16 @@ export default function Dashboard() {
                     <tbody>
                       {rfm.map((c, i) => {
                         const seg = c.segmento_cliente ?? '';
-                        const segColor = seg === 'VIP' ? '#7c3aed' : seg === 'Leal' ? '#10b981' : seg === 'En riesgo' ? '#ef4444' : '#f59e0b';
+                        const sc  = seg === 'VIP' ? '#a855f7' : seg === 'Leal' ? '#10b981' : seg === 'En riesgo' ? '#ef4444' : '#f59e0b';
                         return (
-                          <tr key={i} style={{ borderBottom: '1px solid #f5f3ff' }}>
-                            <td style={{ padding: '0.55rem 0.75rem', fontWeight: '700', color: '#1e1333' }}>{c.nombre ?? '—'}</td>
-                            <td style={{ padding: '0.55rem 0.75rem', color: '#6b7280' }}>{c.telefono ?? '—'}</td>
-                            <td style={{ padding: '0.55rem 0.75rem', color: '#6b7280', textAlign: 'center' }}>{c.recencia_dias ?? '—'}</td>
-                            <td style={{ padding: '0.55rem 0.75rem', color: '#6b7280', textAlign: 'center' }}>{c.frecuencia_pedidos ?? '—'}</td>
-                            <td style={{ padding: '0.55rem 0.75rem', fontWeight: '600', color: '#1e1333' }}>{formatPeso(c.valor_monetario)}</td>
-                            <td style={{ padding: '0.55rem 0.75rem' }}>
-                              <span style={{ background: `${segColor}18`, color: segColor, fontWeight: '800', fontSize: '0.68rem', textTransform: 'uppercase', borderRadius: '6px', padding: '3px 8px' }}>
+                          <tr key={i} style={{ borderBottom: '1px solid #1a1a24' }}>
+                            <td style={{ padding: '0.6rem 0.75rem', fontWeight: '700', color: '#fff' }}>{c.nombre ?? '—'}</td>
+                            <td style={{ padding: '0.6rem 0.75rem', color: '#8b8b9e' }}>{c.telefono ?? '—'}</td>
+                            <td style={{ padding: '0.6rem 0.75rem', color: '#8b8b9e', textAlign: 'center' }}>{c.recencia_dias ?? '—'}</td>
+                            <td style={{ padding: '0.6rem 0.75rem', color: '#8b8b9e', textAlign: 'center' }}>{c.frecuencia_pedidos ?? '—'}</td>
+                            <td style={{ padding: '0.6rem 0.75rem', fontWeight: '600', color: '#fff' }}>{formatPeso(c.valor_monetario)}</td>
+                            <td style={{ padding: '0.6rem 0.75rem' }}>
+                              <span style={{ background: `${sc}18`, color: sc, fontWeight: '800', fontSize: '0.62rem', textTransform: 'uppercase', borderRadius: '6px', padding: '3px 8px' }}>
                                 {seg || '—'}
                               </span>
                             </td>
@@ -306,24 +390,26 @@ export default function Dashboard() {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* ── Cross-selling ── */}
             {crossSelling.length > 0 && (
-              <div style={D.card}>
+              <motion.div style={D.cardFull} custom={11} initial="hidden" animate="visible" variants={fadeUp}>
                 <div style={D.cardHeader}>
                   <div>
                     <h2 style={D.cardTitle}>Cross-Selling</h2>
                     <p style={D.cardSub}>Productos que se compran juntos con frecuencia</p>
                   </div>
                 </div>
-                <div style={D.topList}>
+                <div style={D.list}>
                   {crossSelling.slice(0, 8).map((p, i) => (
-                    <div key={i} style={{ ...D.topRow, gap: '0.75rem' }}>
-                      <div style={{ ...D.rankBadge, background: '#f0fdf4', color: '#10b981' }}>{i + 1}</div>
-                      <div style={{ flex: 1, minWidth: 0, fontSize: '0.85rem', fontWeight: '600', color: '#1e1333', wordBreak: 'break-word', lineHeight: '1.4' }}>
-                        {p.producto_a ?? p.producto1} <span style={{ color: '#a855f7', fontWeight: '800' }}>+</span> {p.producto_b ?? p.producto2}
+                    <div key={i} style={{ ...D.row, gap: '0.75rem' }}>
+                      <div style={{ ...D.badge, background: '#10b98118', color: '#10b981' }}>{i + 1}</div>
+                      <div style={{ flex: 1, minWidth: 0, fontSize: '0.85rem', fontWeight: '600', color: '#c4c4d4', wordBreak: 'break-word', lineHeight: 1.4 }}>
+                        {p.producto_a ?? p.producto1}
+                        <span style={{ color: '#a855f7', fontWeight: '900', margin: '0 0.35rem' }}>+</span>
+                        {p.producto_b ?? p.producto2}
                       </div>
                       <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#10b981', flexShrink: 0 }}>
                         {p.frecuencia} veces
@@ -331,12 +417,12 @@ export default function Dashboard() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             )}
 
-            {/* ── Heatmap de horarios ── */}
+            {/* ── Heatmap ── */}
             {heatmap.length > 0 && (
-              <div style={D.card}>
+              <motion.div style={D.cardFull} custom={12} initial="hidden" animate="visible" variants={fadeUp}>
                 <div style={D.cardHeader}>
                   <div>
                     <h2 style={D.cardTitle}>Actividad por Horario</h2>
@@ -348,7 +434,13 @@ export default function Dashboard() {
                     <thead>
                       <tr>
                         {Object.keys(heatmap[0] ?? {}).map((k) => (
-                          <th key={k} style={{ padding: '0.4rem 0.6rem', color: '#9ca3af', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left', borderBottom: '1px solid #ede9fe', whiteSpace: 'nowrap' }}>
+                          <th key={k} style={{
+                            padding: '0.4rem 0.6rem',
+                            color: '#8b8b9e', fontWeight: '700',
+                            textTransform: 'uppercase', letterSpacing: '0.06em',
+                            textAlign: 'left', borderBottom: '1px solid #2a2a3a',
+                            whiteSpace: 'nowrap', fontSize: '0.6rem',
+                          }}>
                             {k}
                           </th>
                         ))}
@@ -356,9 +448,13 @@ export default function Dashboard() {
                     </thead>
                     <tbody>
                       {heatmap.map((row, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid #f5f3ff' }}>
+                        <tr key={i} style={{ borderBottom: '1px solid #1a1a24' }}>
                           {Object.values(row).map((val, j) => (
-                            <td key={j} style={{ padding: '0.45rem 0.6rem', color: '#1e1333', fontWeight: j === 0 ? '700' : '500' }}>
+                            <td key={j} style={{
+                              padding: '0.45rem 0.6rem',
+                              color: j === 0 ? '#e2e2f0' : '#8b8b9e',
+                              fontWeight: j === 0 ? '700' : '500',
+                            }}>
                               {val}
                             </td>
                           ))}
@@ -367,42 +463,41 @@ export default function Dashboard() {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* ── Top productos ── */}
             {topProductos.length > 0 && (
-              <div style={D.card}>
+              <motion.div style={D.cardFull} custom={13} initial="hidden" animate="visible" variants={fadeUp}>
                 <div style={D.cardHeader}>
                   <div>
                     <h2 style={D.cardTitle}>Top Productos</h2>
                     <p style={D.cardSub}>Ranking por unidades vendidas este mes</p>
                   </div>
                 </div>
-                <div style={D.topList}>
+                <div style={D.list}>
                   {topProductos.map((p, i) => {
                     const barPct = (parseFloat(p.unidades) / maxUnidades) * 100;
-                    const rs = rankStyle(i);
+                    const rankColors = ['#f59e0b', '#9ca3af', '#b45309'];
+                    const rc = rankColors[i] ?? '#a855f7';
                     return (
-                      <div key={i} style={D.topRow}>
-                        <div style={{ ...D.rankBadge, background: rs.bg, color: rs.color }}>
-                          {i + 1}
-                        </div>
-                        <div style={D.topMeta}>
-                          <div style={D.topName}>{p.nombre}</div>
-                          <div style={D.topBarTrack}>
-                            <div style={{ ...D.topBarFill, width: `${barPct}%` }} />
+                      <div key={i} style={D.row}>
+                        <div style={{ ...D.badge, background: `${rc}18`, color: rc }}>{i + 1}</div>
+                        <div style={D.meta}>
+                          <div style={D.name}>{p.nombre}</div>
+                          <div style={D.track}>
+                            <div style={{ ...D.fill, width: `${barPct}%` }} />
                           </div>
                         </div>
-                        <div style={D.topStats}>
-                          <span style={D.topUnidades}>{p.unidades} ud.</span>
-                          <span style={D.topIngresos}>{formatPeso(p.ingresos)}</span>
+                        <div style={D.stats}>
+                          <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#fff', whiteSpace: 'nowrap' }}>{p.unidades} ud.</span>
+                          <span style={{ fontSize: '0.72rem', fontWeight: '600', color: '#a855f7', whiteSpace: 'nowrap' }}>{formatPeso(p.ingresos)}</span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
+              </motion.div>
             )}
           </>
         )}
@@ -413,12 +508,16 @@ export default function Dashboard() {
 
 // ─── Estilos ──────────────────────────────────────────────────────────
 const D = {
-  layout: { display: 'flex' },
+  layout: {
+    display: 'flex',
+    background: '#0f0f13',
+    minHeight: '100vh',
+  },
   main: {
     marginLeft: '240px',
     padding: '2rem 2.5rem',
     flex: 1,
-    background: '#f5f4ff',
+    background: '#0f0f13',
     minHeight: '100vh',
     fontFamily: "'Nunito', system-ui, sans-serif",
   },
@@ -427,40 +526,76 @@ const D = {
   header: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: '2rem',
   },
   title: {
-    fontSize: '1.85rem',
+    fontSize: '1.75rem',
     fontWeight: '900',
-    color: '#1e1333',
+    color: '#ffffff',
     letterSpacing: '-0.03em',
     margin: '0 0 0.25rem',
   },
   subtitle: {
-    fontSize: '0.8rem',
-    color: '#9ca3af',
+    fontSize: '0.78rem',
+    color: '#8b8b9e',
     fontWeight: '500',
     textTransform: 'capitalize',
     margin: 0,
   },
-
-  // KPI grid
-  kpiGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-    gap: '1.25rem',
-    marginBottom: '1.75rem',
+  searchBox: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    background: '#1a1a24',
+    border: '1px solid #2a2a3a',
+    borderRadius: '12px',
+    padding: '0.55rem 1rem',
+  },
+  searchInput: {
+    background: 'transparent',
+    border: 'none',
+    color: '#ffffff',
+    fontSize: '0.85rem',
+    fontFamily: 'inherit',
+    width: '180px',
   },
 
-  // Card
-  card: {
-    background: 'white',
-    borderRadius: '20px',
-    padding: '1.5rem 1.75rem',
-    border: '1px solid #ede9fe',
-    boxShadow: '0 1px 6px rgba(109,40,217,0.06)',
+  // Grids
+  kpiGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: '1rem',
     marginBottom: '1.5rem',
+  },
+  mainRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 300px',
+    gap: '1.5rem',
+    marginBottom: '1.5rem',
+    alignItems: 'start',
+  },
+  sideColumn: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+  },
+
+  // Cards
+  card: {
+    background: '#1a1a24',
+    borderRadius: '16px',
+    padding: '1.5rem 1.75rem',
+    border: '1px solid #2a2a3a',
+    fontFamily: "'Nunito', system-ui, sans-serif",
+  },
+  cardFull: {
+    background: '#1a1a24',
+    borderRadius: '16px',
+    padding: '1.5rem 1.75rem',
+    border: '1px solid #2a2a3a',
+    marginBottom: '1.5rem',
+    fontFamily: "'Nunito', system-ui, sans-serif",
   },
   cardHeader: {
     display: 'flex',
@@ -471,116 +606,111 @@ const D = {
   cardTitle: {
     fontSize: '1rem',
     fontWeight: '800',
-    color: '#1e1333',
+    color: '#ffffff',
     letterSpacing: '-0.01em',
     margin: '0 0 0.2rem',
   },
   cardSub: {
-    fontSize: '0.76rem',
-    color: '#9ca3af',
+    fontSize: '0.73rem',
+    color: '#8b8b9e',
     fontWeight: '500',
     margin: 0,
   },
-  legend: {
+  legendChip: {
     display: 'flex',
     alignItems: 'center',
     gap: '0.4rem',
+    background: 'rgba(168,85,247,0.1)',
+    border: '1px solid rgba(168,85,247,0.2)',
+    borderRadius: '8px',
+    padding: '0.3rem 0.65rem',
   },
   legendDot: {
-    width: '8px', height: '8px',
+    width: '7px', height: '7px',
     borderRadius: '50%',
     background: 'linear-gradient(135deg, #a855f7, #e879f9)',
-    boxShadow: '0 0 6px rgba(168,85,247,0.5)',
-  },
-  legendLabel: {
-    fontSize: '0.72rem',
-    fontWeight: '700',
-    color: '#a78bfa',
+    flexShrink: 0,
   },
 
-  // Chart
-  gridLine: {
-    height: '1px',
-    background: 'rgba(109,40,217,0.07)',
-    width: '100%',
-  },
-  tooltip: {
-    position: 'absolute',
-    bottom: '100%',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    marginBottom: '6px',
-    background: '#1e1333',
-    borderRadius: '8px',
-    padding: '0.35rem 0.65rem',
+  // Hero card (top #1 product)
+  heroCard: {
     display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
-    whiteSpace: 'nowrap',
-    zIndex: 10,
-    boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
-    pointerEvents: 'none',
-  },
-  tooltipVal: {
-    fontSize: '0.75rem',
-    fontWeight: '800',
-    color: 'white',
-    letterSpacing: '-0.01em',
-  },
-  tooltipDate: {
-    fontSize: '0.58rem',
-    color: 'rgba(255,255,255,0.55)',
-    fontWeight: '600',
-  },
-
-  // Top productos
-  topList: {
-    display: 'flex',
-    flexDirection: 'column',
     gap: '0.75rem',
-  },
-  topRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '1rem',
-    padding: '0.875rem 1rem',
-    background: '#faf9ff',
+    background: 'rgba(168,85,247,0.08)',
+    border: '1px solid rgba(168,85,247,0.2)',
     borderRadius: '12px',
-    border: '1px solid #f3f0ff',
-    minWidth: 0,
+    padding: '0.85rem 1rem',
   },
-  rankBadge: {
-    width: '32px', height: '32px',
-    borderRadius: '10px',
+  heroRank: {
+    width: '28px', height: '28px',
+    borderRadius: '8px',
+    background: 'linear-gradient(135deg, #7c3aed, #c084fc)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    color: 'white',
     fontWeight: '900',
     fontSize: '0.85rem',
     flexShrink: 0,
   },
-  topMeta: { flex: 1, minWidth: 0 },
-  topName: {
-    fontSize: '0.88rem',
-    fontWeight: '700',
-    color: '#1e1333',
-    marginBottom: '0.4rem',
-    wordBreak: 'break-word',
-    lineHeight: '1.3',
+
+  // Mini card (indicadores)
+  miniCard: {
+    background: '#0f0f13',
+    borderRadius: '10px',
+    padding: '0.7rem 0.9rem',
+    border: '1px solid #2a2a3a',
   },
-  topBarTrack: {
-    height: '5px',
-    background: '#ede9fe',
+
+  // List rows
+  list: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.6rem',
+  },
+  row: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem',
+    padding: '0.75rem 0.9rem',
+    background: '#0f0f13',
+    borderRadius: '12px',
+    border: '1px solid #1e1e2e',
+    minWidth: 0,
+  },
+  badge: {
+    width: '32px', height: '32px',
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: '900',
+    fontSize: '0.82rem',
+    flexShrink: 0,
+  },
+  meta: { flex: 1, minWidth: 0 },
+  name: {
+    fontSize: '0.85rem',
+    fontWeight: '700',
+    color: '#e2e2f0',
+    marginBottom: '0.35rem',
+    wordBreak: 'break-word',
+    lineHeight: 1.3,
+  },
+  track: {
+    height: '4px',
+    background: '#2a2a3a',
     borderRadius: '50px',
     overflow: 'hidden',
   },
-  topBarFill: {
+  fill: {
     height: '100%',
     background: 'linear-gradient(90deg, #a855f7, #e879f9)',
     borderRadius: '50px',
     transition: 'width 0.5s ease',
   },
-  topStats: {
+  stats: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'flex-end',
@@ -588,17 +718,5 @@ const D = {
     flexShrink: 0,
     textAlign: 'right',
     maxWidth: '120px',
-  },
-  topUnidades: {
-    fontSize: '0.85rem',
-    fontWeight: '800',
-    color: '#1e1333',
-    whiteSpace: 'nowrap',
-  },
-  topIngresos: {
-    fontSize: '0.72rem',
-    fontWeight: '600',
-    color: '#a78bfa',
-    whiteSpace: 'nowrap',
   },
 };

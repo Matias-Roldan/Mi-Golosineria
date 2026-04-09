@@ -1,136 +1,67 @@
 import { useEffect, useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getProductosDisponibles } from '../../api/productosApi';
 import ProductoCard from '../../components/tienda/ProductoCard';
 import Carrito from '../../components/tienda/Carrito';
 import FormularioPedido from '../../components/tienda/FormularioPedido';
 import { useCart } from '../../hooks/useCart';
 
-// ─── useWindowSize ───────────────────────────────────────────────────
+// ─── useWindowSize ────────────────────────────────────────────────────
 const useWindowSize = () => {
-  const [size, setSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const [size, setSize] = useState({ width: window.innerWidth });
   useEffect(() => {
-    const handle = () => setSize({ width: window.innerWidth, height: window.innerHeight });
+    const handle = () => setSize({ width: window.innerWidth });
     window.addEventListener('resize', handle);
     return () => window.removeEventListener('resize', handle);
   }, []);
   return size;
 };
 
-// ─── Staggered reveal ────────────────────────────────────────────────
+// ─── Staggered reveal ─────────────────────────────────────────────────
 const useStaggeredVisible = (count) => {
   const [visibles, setVisibles] = useState([]);
   useEffect(() => {
     setVisibles([]);
     Array.from({ length: count }).forEach((_, i) => {
-      setTimeout(() => setVisibles((prev) => [...prev, i]), i * 50);
+      setTimeout(() => setVisibles((prev) => [...prev, i]), i * 55);
     });
   }, [count]);
   return visibles;
 };
 
-// ─── Skeleton card ───────────────────────────────────────────────────
+// ─── Skeleton card ────────────────────────────────────────────────────
 const SkeletonCard = () => (
-  <div style={skeletonStyles.card}>
-    <div style={skeletonStyles.img} />
-    <div style={skeletonStyles.body}>
-      <div style={{ ...skeletonStyles.line, width: '45%', height: '10px' }} />
-      <div style={{ ...skeletonStyles.line, width: '80%', height: '14px', marginTop: '8px' }} />
-      <div style={{ ...skeletonStyles.line, width: '60%', height: '10px', marginTop: '6px' }} />
-      <div style={{ ...skeletonStyles.line, width: '100%', height: '36px', marginTop: '16px', borderRadius: '10px' }} />
+  <div style={skeletonS.card}>
+    <div style={skeletonS.img} />
+    <div style={skeletonS.body}>
+      <div style={{ ...skeletonS.line, width: '40%', height: '9px' }} />
+      <div style={{ ...skeletonS.line, width: '80%', height: '15px', marginTop: '10px' }} />
+      <div style={{ ...skeletonS.line, width: '55%', height: '9px', marginTop: '6px' }} />
+      <div style={{ ...skeletonS.line, width: '100%', height: '38px', marginTop: '18px', borderRadius: '14px' }} />
     </div>
   </div>
 );
-
-const skeletonStyles = {
-  card: {
-    background: 'white',
-    borderRadius: '20px',
-    overflow: 'hidden',
-    border: '1px solid #e9d5ff',
-  },
-  img: {
-    height: '160px',
-    background: 'linear-gradient(90deg, #f3e8ff 25%, #e9d5ff 50%, #f3e8ff 75%)',
-    backgroundSize: '400px 100%',
-    animation: 'shimmer 1.4s ease infinite',
-  },
-  body: { padding: '1rem', display: 'flex', flexDirection: 'column', gap: '4px' },
-  line: {
-    borderRadius: '6px',
-    background: 'linear-gradient(90deg, #f3e8ff 25%, #e9d5ff 50%, #f3e8ff 75%)',
-    backgroundSize: '400px 100%',
-    animation: 'shimmer 1.4s ease infinite',
-  },
+const skeletonS = {
+  card: { background: 'white', borderRadius: '24px', overflow: 'hidden', border: '1px solid #f3e8ff' },
+  img: { height: '250px', background: 'linear-gradient(90deg,#f3e8ff 25%,#e9d5ff 50%,#f3e8ff 75%)', backgroundSize: '600px 100%', animation: 'shimmer 1.4s ease infinite' },
+  body: { padding: '1.2rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '4px' },
+  line: { borderRadius: '8px', background: 'linear-gradient(90deg,#f3e8ff 25%,#e9d5ff 50%,#f3e8ff 75%)', backgroundSize: '600px 100%', animation: 'shimmer 1.4s ease infinite' },
 };
 
-// ─── Ticker promocional ──────────────────────────────────────────────
-const TICKER_ITEMS = [
-  '🍫 Chocolates importados',
-  '🍬 Caramelos sin TACC',
-  '🚀 Envíos en el día',
-  '🎁 Ideal para eventos',
-  '💜 Más de 50 sabores',
-  '🍪 Galletas y snacks',
-];
-
+// ─── Ticker ───────────────────────────────────────────────────────────
+const TICKER_ITEMS = ['🍫 Chocolates importados', '🍬 Caramelos sin TACC', '🚀 Envíos en el día', '🎁 Ideal para eventos', '💜 Más de 50 sabores', '🍪 Galletas y snacks'];
 const Ticker = () => {
   const text = TICKER_ITEMS.join('   ·   ') + '   ·   ';
   return (
-    <div style={TICK.bar}>
-      <style>{`
-        @keyframes ticker {
-          from { transform: translateX(0); }
-          to   { transform: translateX(-50%); }
-        }
-      `}</style>
-      <div style={TICK.track}>
-        <span style={TICK.content}>{text}{text}</span>
-      </div>
+    <div style={{ background: 'linear-gradient(90deg,#7c3aed,#a855f7)', overflow: 'hidden', whiteSpace: 'nowrap', padding: '0.5rem 0' }}>
+      <span style={{ display: 'inline-block', animation: 'ticker 28s linear infinite', fontSize: '0.73rem', fontWeight: '800', color: 'rgba(255,255,255,0.9)', letterSpacing: '0.05em' }}>
+        {text}{text}
+      </span>
     </div>
   );
 };
 
-const TICK = {
-  bar: {
-    background: 'linear-gradient(90deg, #7c3aed, #a855f7)',
-    overflow: 'hidden',
-    whiteSpace: 'nowrap',
-    padding: '0.5rem 0',
-  },
-  track: { display: 'inline-block', willChange: 'transform' },
-  content: {
-    display: 'inline-block',
-    animation: 'ticker 28s linear infinite',
-    fontSize: '0.75rem',
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.9)',
-    letterSpacing: '0.04em',
-    paddingRight: '0',
-  },
-};
-
-// ─── Ruido SVG de fondo ──────────────────────────────────────────────
-const NoiseBg = () => (
-  <svg style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0, opacity: 0.025 }}>
-    <filter id="noise">
-      <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4" stitchTiles="stitch" />
-      <feColorMatrix type="saturate" values="0" />
-    </filter>
-    <rect width="100%" height="100%" filter="url(#noise)" />
-  </svg>
-);
-
-// ─── Decoración header ───────────────────────────────────────────────
-const HeaderBlobs = () => (
-  <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} viewBox="0 0 1200 140" preserveAspectRatio="xMidYMid slice">
-    <circle cx="1100" cy="-20" r="130" fill="rgba(255,255,255,0.12)" />
-    <circle cx="950"  cy="120"  r="80"  fill="rgba(255,255,255,0.08)" />
-    <circle cx="80"   cy="130"  r="90"  fill="rgba(255,255,255,0.07)" />
-    <circle cx="300"  cy="-30"  r="60"  fill="rgba(255,255,255,0.1)"  />
-  </svg>
-);
-
-// ─── PulseDot carrito ────────────────────────────────────────────────
+// ─── PulseDot carrito ─────────────────────────────────────────────────
 const PulseDot = ({ count }) => {
   const [bounce, setBounce] = useState(false);
   const prev = useRef(count);
@@ -144,45 +75,45 @@ const PulseDot = ({ count }) => {
   if (count === 0) return null;
   return (
     <span style={{
-      background: 'white',
-      color: '#c084fc',
-      borderRadius: '50%',
-      width: '20px', height: '20px',
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '0.68rem',
-      fontWeight: '900',
-      transform: bounce ? 'scale(1.55)' : 'scale(1)',
+      background: 'white', color: '#a855f7', borderRadius: '50%',
+      width: '20px', height: '20px', display: 'inline-flex',
+      alignItems: 'center', justifyContent: 'center',
+      fontSize: '0.65rem', fontWeight: '900', flexShrink: 0,
+      transform: bounce ? 'scale(1.6)' : 'scale(1)',
       transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)',
-      flexShrink: 0,
-    }}>
-      {count}
-    </span>
+    }}>{count}</span>
   );
 };
 
-// ─── Mapa emojis categoría ───────────────────────────────────────────
-const CAT_EMOJI = {
-  Todas: '✦', Chocolates: '🍫', Caramelos: '🍬',
-  Chicles: '🫧', Galletas: '🍪', Snacks: '🍿', Bebidas: '🥤',
-};
+// ─── Mapa emojis categoría ────────────────────────────────────────────
+const CAT_EMOJI = { Todas: '✦', Chocolates: '🍫', Caramelos: '🍬', Chicles: '🫧', Galletas: '🍪', Snacks: '🍿', Bebidas: '🥤' };
 const catEmoji = (c) => CAT_EMOJI[c] ?? '🏷';
+
+// ─── Hero decorativo ──────────────────────────────────────────────────
+const FloatingCandy = ({ emoji, style }) => (
+  <motion.span
+    style={{ position: 'absolute', fontSize: '2.5rem', lineHeight: 1, pointerEvents: 'none', userSelect: 'none', ...style }}
+    animate={{ y: [0, -14, 0], rotate: [0, 8, -8, 0] }}
+    transition={{ duration: 5 + Math.random() * 3, repeat: Infinity, ease: 'easeInOut' }}
+  >
+    {emoji}
+  </motion.span>
+);
 
 // ════════════════════════════════════════════════════════════════════
 export default function Tienda() {
-  const [productos, setProductos]         = useState([]);
-  const [categorias, setCategorias]       = useState([]);
-  const [categoriaActiva, setCatActiva]   = useState('Todas');
-  const [mostrarForm, setMostrarForm]     = useState(false);
-  const [loading, setLoading]             = useState(true);
-  const [hoveredCat, setHoveredCat]       = useState(null);
-  const [hoveredCart, setHoveredCart]     = useState(false);
-  const { carrito }                       = useCart();
-  const { width }                         = useWindowSize();
-  const isMobile  = width < 768;
-  const isTablet  = width < 1024;
+  const [productos, setProductos]       = useState([]);
+  const [categorias, setCategorias]     = useState([]);
+  const [categoriaActiva, setCatActiva] = useState('Todas');
+  const [mostrarForm, setMostrarForm]   = useState(false);
+  const [carritoOpen, setCarritoOpen]   = useState(false);
+  const [loading, setLoading]           = useState(true);
+  const [hoveredCat, setHoveredCat]     = useState(null);
+  const { carrito }                     = useCart();
+  const { width }                       = useWindowSize();
+  const isMobile = width < 640;
   const totalItems = carrito.reduce((a, p) => a + p.cantidad, 0);
+  const productosRef = useRef(null);
 
   useEffect(() => {
     getProductosDisponibles().then(({ data }) => {
@@ -198,100 +129,188 @@ export default function Tienda() {
 
   const visibles = useStaggeredVisible(filtrados.length);
 
+  const scrollToProductos = () => {
+    productosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
     <div style={T.page}>
-      <NoiseBg />
 
       {/* ── Keyframes globales ── */}
       <style>{`
         @keyframes shimmer {
-          0%   { background-position: -400px 0; }
-          100% { background-position:  400px 0; }
+          0%   { background-position: -600px 0; }
+          100% { background-position:  600px 0; }
+        }
+        @keyframes ticker {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-50%); }
         }
         @keyframes fadeUp {
-          from { opacity:0; transform:translateY(20px); }
-          to   { opacity:1; transform:translateY(0);    }
-        }
-        @keyframes headerIn {
-          from { opacity:0; transform:translateY(-12px); }
-          to   { opacity:1; transform:translateY(0);     }
+          from { opacity:0; transform:translateY(24px); }
+          to   { opacity:1; transform:translateY(0); }
         }
         *, *::before, *::after { box-sizing: border-box; }
-        ::-webkit-scrollbar { display: none; }
-        html { scroll-behavior: smooth; }
       `}</style>
 
-      {/* ══ HEADER ═══════════════════════════════════════════════════ */}
-      <header style={T.header}>
-        <HeaderBlobs />
-        <div style={{ ...T.headerInner, flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '1.25rem' : 0, animation: 'headerIn 0.5s ease both' }}>
-
-          {/* Logo + copy */}
-          <div style={T.headerLeft}>
-            <div style={T.eyebrow}>
-              <span style={T.eyebrowDot} />
-              Tienda Online
-            </div>
-            <h1 style={{ ...T.headerTitle, fontSize: isMobile ? 'clamp(1.5rem,7vw,1.9rem)' : 'clamp(1.8rem,3vw,2.2rem)' }}>
-              Mi Golosinería
-            </h1>
-            <p style={T.headerSub}>Mondelez &amp; más · Envíos en el día 🚀</p>
+      {/* ══ NAVBAR ═══════════════════════════════════════════════════ */}
+      <nav style={T.navbar}>
+        <div style={{ ...T.navInner, flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.875rem' : 0 }}>
+          <div style={T.navBrand}>
+            <span style={T.navLogo}>🍬</span>
+            <span style={T.navName}>Mi Golosinería</span>
           </div>
 
-          {/* Botón carrito */}
-          <button
+          <motion.button
             style={{
               ...T.cartBtn,
-              transform: hoveredCart ? 'translateY(-3px) scale(1.04)' : 'none',
-              boxShadow: hoveredCart
-                ? '0 12px 32px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.35)'
-                : '0 4px 16px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.25)',
+              background: totalItems > 0
+                ? 'linear-gradient(135deg,#a855f7,#e879f9)'
+                : 'rgba(168,85,247,0.1)',
+              border: totalItems > 0 ? 'none' : '1.5px solid #e9d5ff',
+              color: totalItems > 0 ? 'white' : '#7c3aed',
+              boxShadow: totalItems > 0 ? '0 4px 18px rgba(168,85,247,0.4)' : 'none',
             }}
-            onMouseEnter={() => setHoveredCart(true)}
-            onMouseLeave={() => setHoveredCart(false)}
+            onClick={() => setCarritoOpen(true)}
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
           >
-            <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>🛒</span>
+            <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🛒</span>
             <span style={T.cartBtnLabel}>Carrito</span>
             <PulseDot count={totalItems} />
-          </button>
+          </motion.button>
         </div>
-      </header>
+      </nav>
+
       <Ticker />
 
-      {/* ══ CONTENIDO ════════════════════════════════════════════════ */}
-      <div style={{ ...T.container, padding: isMobile ? '0 1rem 7rem' : isTablet ? '0 1.5rem 5rem' : '0 2.5rem 3rem' }}>
+      {/* ══ HERO ════════════════════════════════════════════════════ */}
+      <section style={T.hero}>
+        {/* Blobs de fondo */}
+        <div style={{ ...T.blob, top: '-80px', right: '-60px', width: '380px', height: '380px', background: 'radial-gradient(circle,#e9d5ff 0%,transparent 70%)' }} />
+        <div style={{ ...T.blob, bottom: '-60px', left: '-80px', width: '320px', height: '320px', background: 'radial-gradient(circle,#fce7f3 0%,transparent 70%)' }} />
+        <div style={{ ...T.blob, top: '30%', left: '40%', width: '200px', height: '200px', background: 'radial-gradient(circle,#f3e8ff 0%,transparent 70%)' }} />
 
-        {/* ── Filtros de categoría ── */}
-        <section style={T.filtrosSection}>
-          <p style={T.filtrosEyebrow}>Categorías</p>
-          <div style={{ overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '4px' }}>
-            <div style={{ ...T.filtrosRow, flexWrap: isMobile ? 'nowrap' : 'wrap' }}>
-              {categorias.map((cat) => {
-                const active = cat === categoriaActiva;
-                const hov    = hoveredCat === cat;
-                return (
-                  <button
-                    key={cat}
-                    style={{
-                      ...T.pill,
-                      ...(active ? T.pillActive : hov ? T.pillHover : {}),
-                      flexShrink: isMobile ? 0 : undefined,
-                    }}
-                    onClick={() => setCatActiva(cat)}
-                    onMouseEnter={() => setHoveredCat(cat)}
-                    onMouseLeave={() => setHoveredCat(null)}
-                  >
-                    <span style={{ fontSize: '1rem', lineHeight: 1 }}>{catEmoji(cat)}</span>
-                    <span>{cat}</span>
-                    {active && <span style={T.pillActivePip} />}
-                  </button>
-                );
-              })}
-            </div>
+        {/* Candies flotantes */}
+        <FloatingCandy emoji="🍫" style={{ top: '12%', right: isMobile ? '5%' : '12%' }} />
+        <FloatingCandy emoji="🍭" style={{ top: '55%', right: isMobile ? '8%' : '20%' }} />
+        <FloatingCandy emoji="🍪" style={{ bottom: '18%', left: isMobile ? '5%' : '10%' }} />
+        <FloatingCandy emoji="🧁" style={{ top: '20%', left: isMobile ? '80%' : '30%' }} />
+
+        {/* Contenido hero */}
+        <div style={{ ...T.heroContent, padding: isMobile ? '0 1.25rem' : '0 2.5rem' }}>
+          <motion.div
+            style={T.heroEyebrow}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.33, 1, 0.68, 1] }}
+          >
+            <span style={T.heroEyebrowDot} />
+            Tienda Online · Mondelez &amp; más
+          </motion.div>
+
+          <motion.h1
+            style={{ ...T.heroTitle, fontSize: isMobile ? 'clamp(2.4rem,11vw,3.2rem)' : 'clamp(3rem,6vw,5rem)' }}
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.1, ease: [0.33, 1, 0.68, 1] }}
+          >
+            La mejor<br />
+            <span style={T.heroTitleAccent}>golosinería</span>
+          </motion.h1>
+
+          <motion.p
+            style={{ ...T.heroSub, fontSize: isMobile ? '0.95rem' : '1.1rem' }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2, ease: [0.33, 1, 0.68, 1] }}
+          >
+            Más de 50 sabores · chocolates importados · caramelos sin TACC<br />
+            Envíos en el día a todo el país 🚀
+          </motion.p>
+
+          <motion.div
+            style={{ display: 'flex', gap: '0.875rem', flexWrap: 'wrap' }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3, ease: [0.33, 1, 0.68, 1] }}
+          >
+            <motion.button
+              style={T.heroCta}
+              onClick={scrollToProductos}
+              whileHover={{ scale: 1.04, y: -3 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 20 }}
+            >
+              Ver productos ↓
+            </motion.button>
+            <motion.button
+              style={T.heroCtaSecundario}
+              onClick={() => setCarritoOpen(true)}
+              whileHover={{ scale: 1.04, y: -3 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 20 }}
+            >
+              🛒 Mi carrito
+              {totalItems > 0 && <span style={T.heroCartCount}>{totalItems}</span>}
+            </motion.button>
+          </motion.div>
+
+          {/* Stats rápidos */}
+          <motion.div
+            style={{ ...T.heroStats, flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.75rem' : '2rem' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.45 }}
+          >
+            {[['50+', 'Productos'], ['⚡', 'Envío express'], ['💜', 'Sin TACC']].map(([val, lbl]) => (
+              <div key={lbl} style={T.heroStat}>
+                <span style={T.heroStatVal}>{val}</span>
+                <span style={T.heroStatLbl}>{lbl}</span>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ══ PRODUCTOS ═══════════════════════════════════════════════ */}
+      <div style={T.productosBg}>
+      <div ref={productosRef} style={{ ...T.container, padding: isMobile ? '0 1rem 5rem' : '0 2.5rem 4rem' }}>
+
+        {/* Título sección */}
+        <div style={T.sectionHeader}>
+          <h2 style={T.sectionTitle}>Nuestros productos</h2>
+          <p style={T.sectionSub}>Seleccioná tus favoritos y armá tu pedido</p>
+        </div>
+
+        {/* ── Filtros categoría ── */}
+        <div style={{ overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '4px', marginBottom: '1.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: isMobile ? 'nowrap' : 'wrap' }}>
+            {categorias.map((cat) => {
+              const active = cat === categoriaActiva;
+              const hov    = hoveredCat === cat;
+              return (
+                <button
+                  key={cat}
+                  style={{
+                    ...T.pill,
+                    ...(active ? T.pillActive : hov ? T.pillHover : {}),
+                    flexShrink: isMobile ? 0 : undefined,
+                  }}
+                  onClick={() => setCatActiva(cat)}
+                  onMouseEnter={() => setHoveredCat(cat)}
+                  onMouseLeave={() => setHoveredCat(null)}
+                >
+                  <span style={{ fontSize: '1rem', lineHeight: 1 }}>{catEmoji(cat)}</span>
+                  <span>{cat}</span>
+                </button>
+              );
+            })}
           </div>
-        </section>
+        </div>
 
-        {/* ── Separador con conteo ── */}
+        {/* Separador con conteo */}
         {!loading && (
           <div style={T.sep}>
             <span style={T.sepLine} />
@@ -302,259 +321,290 @@ export default function Tienda() {
           </div>
         )}
 
-        {/* ── Layout productos + carrito ── */}
+        {/* Grid productos */}
         <div style={{
-          ...T.layout,
-          gridTemplateColumns: !isMobile && !isTablet ? '1fr 340px' : '1fr',
-          gap: isMobile ? '1rem' : '2rem',
+          display: 'grid',
+          gridTemplateColumns: isMobile
+            ? 'repeat(auto-fill,minmax(158px,1fr))'
+            : 'repeat(auto-fill,minmax(280px,1fr))',
+          gap: isMobile ? '1rem' : '1.5rem',
+          width: '100%',
         }}>
-
-          {/* Grid */}
-          <div style={{
-            ...T.grid,
-            gridTemplateColumns: isMobile
-              ? 'repeat(auto-fill, minmax(152px, 1fr))'
-              : 'repeat(auto-fill, minmax(220px, 1fr))',
-            gap: isMobile ? '0.875rem' : '1.25rem',
-          }}>
-            {loading
-              ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
-              : filtrados.length === 0
-                ? <EmptyState onReset={() => setCatActiva('Todas')} />
-                : filtrados.map((p, i) => (
-                    <div key={p.id} style={{
-                      animation: visibles.includes(i) ? 'fadeUp 0.38s ease both' : 'none',
-                      opacity: visibles.includes(i) ? 1 : 0,
-                    }}>
-                      <ProductoCard producto={p} />
-                    </div>
-                  ))
-            }
-          </div>
-
-          {/* Carrito lateral desktop */}
-          {!isMobile && !isTablet && (
-            <aside style={T.aside}>
-              <Carrito onConfirmar={() => setMostrarForm(true)} productos={productos} />
-            </aside>
-          )}
+          {loading
+            ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
+            : filtrados.length === 0
+              ? <EmptyState onReset={() => setCatActiva('Todas')} />
+              : filtrados.map((p, i) => (
+                  <div key={p.id} style={{
+                    animation: visibles.includes(i) ? 'fadeUp 0.42s ease both' : 'none',
+                    opacity: visibles.includes(i) ? 1 : 0,
+                  }}>
+                    <ProductoCard producto={p} />
+                  </div>
+                ))
+          }
         </div>
       </div>
+      </div>
 
-      {/* ── Carrito bottom sheet móvil/tablet ── */}
-      {(isMobile || isTablet) && (
-        <div style={T.cartSheet}>
-          <Carrito onConfirmar={() => setMostrarForm(true)} productos={productos} />
-        </div>
-      )}
+      {/* ══ CARRITO SIDEBAR ══════════════════════════════════════════ */}
+      <Carrito
+        isOpen={carritoOpen}
+        onClose={() => setCarritoOpen(false)}
+        onConfirmar={() => setMostrarForm(true)}
+        productos={productos}
+      />
 
       {mostrarForm && <FormularioPedido onCancelar={() => setMostrarForm(false)} />}
     </div>
   );
 }
 
-// ─── Empty state ─────────────────────────────────────────────────────
+// ─── Empty state ──────────────────────────────────────────────────────
 function EmptyState({ onReset }) {
-  const [hov, setHov] = useState(false);
   return (
     <div style={{ gridColumn: '1/-1', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '5rem 1rem', gap: '1rem' }}>
-      {/* SVG ilustración inline */}
       <svg width="96" height="96" viewBox="0 0 96 96" fill="none">
         <circle cx="48" cy="48" r="48" fill="#f3e8ff" />
         <text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fontSize="38">🍬</text>
       </svg>
-      <p style={{ color: '#1e1333', fontWeight: '800', fontSize: '1.1rem', margin: 0, fontFamily: 'Georgia, serif' }}>
+      <p style={{ color: '#1e1333', fontWeight: '900', fontSize: '1.15rem', margin: 0, letterSpacing: '-0.02em' }}>
         Sin productos aquí
       </p>
       <p style={{ color: '#7c6a9e', fontSize: '0.875rem', margin: 0 }}>
         Esta categoría no tiene productos disponibles.
       </p>
-      <button
+      <motion.button
         style={{
-          marginTop: '0.5rem',
-          padding: '0.6rem 1.4rem',
-          borderRadius: '50px',
-          border: '1.5px solid #e9d5ff',
-          background: hov ? '#f3e8ff' : 'white',
-          color: '#7c3aed',
-          fontWeight: '700',
-          fontSize: '0.875rem',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          fontFamily: 'inherit',
-          transform: hov ? 'translateY(-1px)' : 'none',
+          marginTop: '0.5rem', padding: '0.65rem 1.5rem', borderRadius: '50px',
+          border: '1.5px solid #e9d5ff', background: 'white', color: '#7c3aed',
+          fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit',
         }}
         onClick={onReset}
-        onMouseEnter={() => setHov(true)}
-        onMouseLeave={() => setHov(false)}
+        whileHover={{ scale: 1.05, y: -2 }}
+        whileTap={{ scale: 0.96 }}
       >
         ✦ Ver todos los productos
-      </button>
+      </motion.button>
     </div>
   );
 }
 
-// ─── Estilos Tienda ──────────────────────────────────────────────────
+// ─── Estilos ──────────────────────────────────────────────────────────
 const T = {
   page: {
     minHeight: '100vh',
-    background: '#faf5ff',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-    position: 'relative',
+    background: '#fef9f0',
+    fontFamily: "'Nunito', system-ui, sans-serif",
   },
 
-  // Header
-  header: {
-    background: 'linear-gradient(130deg, #a855f7 0%, #c084fc 40%, #e879f9 75%, #f0abfc 100%)',
-    padding: '1.75rem 0',
-    position: 'relative',
-    overflow: 'hidden',
-    boxShadow: '0 8px 48px rgba(168,85,247,0.3)',
+  // Navbar
+  navbar: {
+    background: 'rgba(254,249,240,0.92)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+    borderBottom: '1px solid #f3e8ff',
+    position: 'sticky',
+    top: 0,
+    zIndex: 100,
   },
-  headerInner: {
+  navInner: {
     maxWidth: '1280px',
     margin: '0 auto',
-    padding: '0 2.5rem',
+    padding: '1rem 2.5rem',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    position: 'relative',
-    zIndex: 1,
   },
-  headerLeft: { display: 'flex', flexDirection: 'column', gap: '0.2rem' },
-  eyebrow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.4rem',
-    fontSize: '0.68rem',
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.75)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.14em',
-  },
-  eyebrowDot: {
-    width: '6px', height: '6px',
-    borderRadius: '50%',
-    background: 'rgba(255,255,255,0.9)',
-    display: 'inline-block',
-    boxShadow: '0 0 6px rgba(255,255,255,0.8)',
-  },
-  headerTitle: {
-    fontFamily: 'Georgia, "Times New Roman", serif',
+  navBrand: { display: 'flex', alignItems: 'center', gap: '0.6rem' },
+  navLogo: { fontSize: '1.6rem', lineHeight: 1 },
+  navName: {
     fontWeight: '900',
-    color: 'white',
-    margin: 0,
+    fontSize: '1.2rem',
+    color: '#1e1333',
     letterSpacing: '-0.03em',
-    lineHeight: 1.08,
-    textShadow: '0 2px 12px rgba(0,0,0,0.15)',
-  },
-  headerSub: {
-    fontSize: '0.82rem',
-    color: 'rgba(255,255,255,0.8)',
-    margin: 0,
-    fontWeight: '400',
   },
   cartBtn: {
     display: 'flex',
     alignItems: 'center',
     gap: '0.5rem',
-    background: 'rgba(255,255,255,0.18)',
-    backdropFilter: 'blur(16px)',
-    WebkitBackdropFilter: 'blur(16px)',
-    border: '1.5px solid rgba(255,255,255,0.38)',
     borderRadius: '50px',
     padding: '0.65rem 1.25rem',
     cursor: 'pointer',
-    transition: 'all 0.25s cubic-bezier(0.34,1.56,0.64,1)',
-    minHeight: '48px',
+    minHeight: '46px',
     minWidth: '120px',
-    color: 'white',
     fontFamily: 'inherit',
+    transition: 'background 0.2s ease, box-shadow 0.2s ease',
   },
   cartBtnLabel: {
-    fontWeight: '700',
-    fontSize: '0.88rem',
-    color: 'white',
+    fontWeight: '800',
+    fontSize: '0.9rem',
     letterSpacing: '0.01em',
   },
 
-  // Filtros
-  filtrosSection: { marginTop: '0.25rem', marginBottom: '0.25rem' },
-  filtrosEyebrow: {
-    fontSize: '0.68rem',
-    fontWeight: '700',
-    color: '#a78bfa',
-    textTransform: 'uppercase',
-    letterSpacing: '0.14em',
-    margin: '0 0 0.75rem 0.1rem',
+  // Hero
+  hero: {
+    background: 'linear-gradient(160deg,#fef9f0 0%,#f3e8ff 55%,#fce7f3 100%)',
+    padding: '5rem 0 4.5rem',
+    position: 'relative',
+    overflow: 'hidden',
+    minHeight: '520px',
+    display: 'flex',
+    alignItems: 'center',
   },
-  filtrosRow: { display: 'flex', gap: '0.5rem' },
-  pill: {
+  blob: {
+    position: 'absolute',
+    borderRadius: '50%',
+    opacity: 0.7,
+    pointerEvents: 'none',
+  },
+  heroContent: {
+    maxWidth: '1280px',
+    margin: '0 auto',
+    width: '100%',
+    position: 'relative',
+    zIndex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1.5rem',
+    maxWidth: '680px',
+  },
+  heroEyebrow: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '0.4rem',
-    padding: '0.55rem 1.1rem',
-    borderRadius: '50px',
-    border: '1.5px solid #e9d5ff',
-    background: 'white',
-    color: '#6d28d9',
+    gap: '0.5rem',
+    fontSize: '0.75rem',
+    fontWeight: '800',
+    color: '#a855f7',
+    textTransform: 'uppercase',
+    letterSpacing: '0.15em',
+  },
+  heroEyebrowDot: {
+    width: '8px', height: '8px',
+    borderRadius: '50%',
+    background: '#a855f7',
+    display: 'inline-block',
+    boxShadow: '0 0 8px #a855f7',
+  },
+  heroTitle: {
+    fontFamily: 'Georgia, "Times New Roman", serif',
+    fontWeight: '900',
+    color: '#1e1333',
+    lineHeight: 1.05,
+    letterSpacing: '-0.04em',
+    margin: 0,
+  },
+  heroTitleAccent: {
+    background: 'linear-gradient(135deg,#a855f7,#e879f9)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+  },
+  heroSub: {
+    color: '#7c6a9e',
     fontWeight: '600',
-    fontSize: '0.845rem',
+    lineHeight: 1.65,
+    margin: 0,
+  },
+  heroCta: {
+    padding: '0.9rem 2rem',
+    borderRadius: '50px',
+    border: 'none',
+    background: 'linear-gradient(135deg,#a855f7,#e879f9)',
+    color: 'white',
+    fontWeight: '900',
+    fontSize: '1rem',
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    whiteSpace: 'nowrap',
-    minHeight: '44px',
     fontFamily: 'inherit',
-    boxShadow: '0 1px 4px rgba(192,132,252,0.08)',
+    boxShadow: '0 8px 28px rgba(168,85,247,0.4)',
+    letterSpacing: '0.01em',
+  },
+  heroCtaSecundario: {
+    padding: '0.9rem 1.75rem',
+    borderRadius: '50px',
+    border: '2px solid #e9d5ff',
+    background: 'white',
+    color: '#7c3aed',
+    fontWeight: '900',
+    fontSize: '1rem',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    letterSpacing: '0.01em',
+  },
+  heroCartCount: {
+    background: '#a855f7',
+    color: 'white',
+    borderRadius: '50%',
+    width: '22px', height: '22px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '0.7rem',
+    fontWeight: '900',
+    flexShrink: 0,
+  },
+  heroStats: {
+    display: 'flex',
+    paddingTop: '0.5rem',
+    borderTop: '1px solid #e9d5ff',
+  },
+  heroStat: { display: 'flex', alignItems: 'center', gap: '0.5rem' },
+  heroStatVal: { fontWeight: '900', fontSize: '1.1rem', color: '#1e1333', letterSpacing: '-0.03em' },
+  heroStatLbl: { fontSize: '0.82rem', color: '#7c6a9e', fontWeight: '600' },
+
+  // Sección productos
+  productosBg: {
+    background: '#ffffff',
+    borderTop: '3px solid #f3e8ff',
+    boxShadow: 'inset 0 6px 32px rgba(168,85,247,0.05)',
+    width: '100%',
+  },
+  container: { maxWidth: '1280px', margin: '0 auto', width: '100%' },
+  sectionHeader: { paddingTop: '3rem', paddingBottom: '2rem' },
+  sectionTitle: {
+    fontSize: 'clamp(1.6rem,4vw,2.2rem)',
+    fontWeight: '900',
+    color: '#1e1333',
+    letterSpacing: '-0.04em',
+    fontFamily: 'Georgia, serif',
+    margin: 0,
+  },
+  sectionSub: {
+    color: '#7c6a9e',
+    fontWeight: '600',
+    fontSize: '0.95rem',
+    marginTop: '0.4rem',
+  },
+
+  // Filtros
+  pill: {
+    display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+    padding: '0.55rem 1.1rem', borderRadius: '50px',
+    border: '1.5px solid #e9d5ff', background: 'white', color: '#6d28d9',
+    fontWeight: '700', fontSize: '0.87rem', cursor: 'pointer',
+    transition: 'all 0.2s ease', whiteSpace: 'nowrap', minHeight: '44px',
+    fontFamily: 'inherit', boxShadow: '0 1px 4px rgba(192,132,252,0.08)',
   },
   pillHover: {
-    borderColor: '#c084fc',
-    background: '#faf5ff',
-    boxShadow: '0 4px 14px rgba(192,132,252,0.2)',
-    transform: 'translateY(-2px)',
+    borderColor: '#c084fc', background: '#faf5ff',
+    boxShadow: '0 4px 14px rgba(192,132,252,0.2)', transform: 'translateY(-2px)',
   },
   pillActive: {
     background: 'linear-gradient(135deg,#c084fc,#e879f9)',
-    color: 'white',
-    border: '1.5px solid transparent',
-    fontWeight: '700',
-    boxShadow: '0 6px 20px rgba(192,132,252,0.45)',
-    transform: 'translateY(-1px)',
-  },
-  pillActivePip: {
-    width: '5px', height: '5px',
-    borderRadius: '50%',
-    background: 'rgba(255,255,255,0.85)',
-    flexShrink: 0,
+    color: 'white', border: '1.5px solid transparent', fontWeight: '800',
+    boxShadow: '0 6px 20px rgba(192,132,252,0.45)', transform: 'translateY(-1px)',
   },
 
   // Separador
-  sep: { display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1.75rem 0 1.5rem' },
-  sepLine: {
-    flex: 1, height: '1px', display: 'block',
-    background: 'linear-gradient(90deg, transparent, #e9d5ff, transparent)',
-  },
+  sep: { display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '0 0 1.75rem' },
+  sepLine: { flex: 1, height: '1px', display: 'block', background: 'linear-gradient(90deg,transparent,#e9d5ff,transparent)' },
   sepChip: {
-    fontSize: '0.68rem',
-    fontWeight: '800',
-    color: '#a78bfa',
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-    whiteSpace: 'nowrap',
-    background: '#f3e8ff',
-    padding: '0.25rem 0.75rem',
-    borderRadius: '50px',
+    fontSize: '0.65rem', fontWeight: '900', color: '#a78bfa',
+    textTransform: 'uppercase', letterSpacing: '0.1em', whiteSpace: 'nowrap',
+    background: '#f3e8ff', padding: '0.25rem 0.8rem', borderRadius: '50px',
     border: '1px solid #e9d5ff',
-  },
-
-  // Layout
-  layout: { display: 'grid', alignItems: 'start' },
-  grid:   { display: 'grid' },
-  aside:  { position: 'sticky', top: '1.5rem' },
-  container: { maxWidth: '1280px', margin: '2rem auto 0', position: 'relative', zIndex: 1 },
-  cartSheet: {
-    position: 'fixed', bottom: 0, left: 0, right: 0,
-    zIndex: 200,
-    boxShadow: '0 -12px 48px rgba(168,85,247,0.18)',
   },
 };
