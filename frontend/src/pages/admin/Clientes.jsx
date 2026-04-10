@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, Pencil, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Search, Plus, Pencil, ChevronDown, ChevronUp, X, Menu } from 'lucide-react';
 import Sidebar from '../../components/admin/Sidebar';
+import { useSidebar } from '../../context/SidebarContext';
 import { getClientes, getPerfilCliente, editarCliente, crearCliente } from '../../api/clientesApi';
 
+const ITEMS_POR_PAGINA = 20;
 const emptyForm = { nombre: '', telefono: '', direccion: '', email: '' };
 
 const estadoColor = {
@@ -78,25 +80,25 @@ function ModalCliente({ cliente, onCerrar, onGuardado }) {
             <label style={modal.label}>Nombre *</label>
             <input style={modal.input} value={form.nombre}
               onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-              placeholder="Nombre completo" required />
+              placeholder="Nombre completo" required maxLength={100} />
           </div>
           <div>
             <label style={modal.label}>Teléfono / WhatsApp *</label>
             <input style={modal.input} value={form.telefono}
               onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-              placeholder="Ej: 5491155556666" required />
+              placeholder="Ej: 5491155556666" required maxLength={20} />
           </div>
           <div>
             <label style={modal.label}>Dirección</label>
             <input style={modal.input} value={form.direccion}
               onChange={(e) => setForm({ ...form, direccion: e.target.value })}
-              placeholder="Ej: Av. Corrientes 1234, CABA" />
+              placeholder="Ej: Av. Corrientes 1234, CABA" maxLength={200} />
           </div>
           <div>
             <label style={modal.label}>Email</label>
             <input style={modal.input} type="email" value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="Ej: cliente@email.com" />
+              placeholder="Ej: cliente@email.com" maxLength={150} />
           </div>
           {error && <p style={modal.error}>{error}</p>}
           <div style={modal.acciones}>
@@ -112,7 +114,7 @@ function ModalCliente({ cliente, onCerrar, onGuardado }) {
 }
 
 // ── Fila expandible con historial ───────────────────────────────────
-function FilaCliente({ c, onVerPerfil, onEditar }) {
+function FilaCliente({ c, onEditar }) {
   const [expandido, setExpandido] = useState(false);
   const [historial, setHistorial] = useState(null);
   const [cargando, setCargando] = useState(false);
@@ -220,24 +222,41 @@ function FilaCliente({ c, onVerPerfil, onEditar }) {
 
 // ── Página Principal ────────────────────────────────────────────────
 export default function Clientes() {
+  const { toggle, isMobile } = useSidebar();
   const [clientes, setClientes] = useState([]);
   const [modalCliente, setModalCliente] = useState(null);
   const [busqueda, setBusqueda] = useState('');
+  const [pagina, setPagina] = useState(1);
 
   const cargar = () => getClientes().then(({ data }) => setClientes(data));
   useEffect(() => { cargar(); }, []);
+
+  useEffect(() => { setPagina(1); }, [busqueda]);
 
   const clientesFiltrados = clientes.filter(c =>
     c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
     c.telefono.includes(busqueda)
   );
 
+  const totalPaginas = Math.ceil(clientesFiltrados.length / ITEMS_POR_PAGINA);
+  const clientesPaginados = clientesFiltrados.slice(
+    (pagina - 1) * ITEMS_POR_PAGINA,
+    pagina * ITEMS_POR_PAGINA
+  );
+
   return (
     <div style={styles.layout}>
       <Sidebar />
-      <main style={styles.main}>
+      <main style={{ ...styles.main, marginLeft: isMobile ? 0 : '240px' }}>
         <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={0} style={styles.header}>
-          <h1 style={styles.title}>👥 Clientes</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {isMobile && (
+              <button style={styles.btnHamburger} onClick={toggle}>
+                <Menu size={22} />
+              </button>
+            )}
+            <h1 style={styles.title}>👥 Clientes</h1>
+          </div>
           <button style={styles.btnPrimary} onClick={() => setModalCliente('nuevo')}>
             <Plus size={16} style={{ marginRight: '0.4rem' }} />
             Nuevo cliente
@@ -272,7 +291,7 @@ export default function Clientes() {
               </tr>
             </thead>
             <tbody>
-              {clientesFiltrados.map((c) => (
+              {clientesPaginados.map((c) => (
                 <FilaCliente
                   key={c.id}
                   c={c}
@@ -288,6 +307,26 @@ export default function Clientes() {
               )}
             </tbody>
           </table>
+
+          {totalPaginas > 1 && (
+            <div style={styles.pagination}>
+              <button
+                style={{ ...styles.btnPag, opacity: pagina === 1 ? 0.4 : 1 }}
+                disabled={pagina === 1}
+                onClick={() => setPagina(p => p - 1)}
+              >
+                ← Anterior
+              </button>
+              <span style={styles.paginaInfo}>Página {pagina} de {totalPaginas}</span>
+              <button
+                style={{ ...styles.btnPag, opacity: pagina === totalPaginas ? 0.4 : 1 }}
+                disabled={pagina === totalPaginas}
+                onClick={() => setPagina(p => p + 1)}
+              >
+                Siguiente →
+              </button>
+            </div>
+          )}
         </motion.div>
       </main>
 
@@ -305,7 +344,7 @@ export default function Clientes() {
 const styles = {
   layout: { display: 'flex' },
   main: {
-    marginLeft: '240px', padding: '2rem 2.5rem', flex: 1,
+    padding: '2rem 2.5rem', flex: 1,
     background: '#0f0f13', minHeight: '100vh',
     fontFamily: "'Nunito', system-ui, sans-serif", color: '#f1f1f3',
   },
@@ -316,6 +355,11 @@ const styles = {
     border: 'none', padding: '0.65rem 1.4rem', borderRadius: '12px', cursor: 'pointer',
     fontWeight: '700', fontSize: '0.9rem', boxShadow: '0 4px 14px rgba(168,85,247,0.35)',
     fontFamily: 'inherit', display: 'flex', alignItems: 'center',
+  },
+  btnHamburger: {
+    background: '#1a1a24', border: '1px solid #2a2a3a', color: '#f1f1f3',
+    borderRadius: '10px', padding: '0.45rem', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   searchRow: { display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' },
   searchWrapper: {
@@ -380,6 +424,16 @@ const styles = {
     fontSize: '0.68rem', padding: '0.15rem 0.5rem', borderRadius: '8px', fontWeight: '700',
   },
   pedidoTotal: { fontSize: '0.85rem', fontWeight: '800', color: '#10b981' },
+  pagination: {
+    display: 'flex', justifyContent: 'center', alignItems: 'center',
+    gap: '1rem', padding: '1.25rem',
+  },
+  paginaInfo: { color: '#8b8b9e', fontSize: '0.88rem', fontWeight: '600' },
+  btnPag: {
+    background: '#12121a', border: '1px solid #2a2a3a', color: '#a855f7',
+    borderRadius: '10px', padding: '0.5rem 1.25rem', cursor: 'pointer',
+    fontWeight: '700', fontSize: '0.88rem', fontFamily: 'inherit',
+  },
 };
 
 const modal = {

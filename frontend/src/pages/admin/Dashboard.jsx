@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import Sidebar from '../../components/admin/Sidebar';
 import StatsCard from '../../components/admin/StatsCard';
+import { useSidebar } from '../../context/SidebarContext';
 import {
   getKpis, getVentasDiarias, getTopProductos, getHeatmap,
   getAnalisisPareto, getAnalisisRFM, getSaludStock, getCrossSelling,
@@ -60,6 +61,7 @@ function BarTooltip({ active, payload, label }) {
 
 // ════════════════════════════════════════════════════════════════════════
 export default function Dashboard() {
+  const { toggle, isMobile } = useSidebar();
   const [kpis, setKpis]               = useState(null);
   const [ventas, setVentas]           = useState([]);
   const [topProductos, setTopProductos] = useState([]);
@@ -124,13 +126,23 @@ export default function Dashboard() {
 
       <Sidebar />
 
-      <main style={D.main}>
+      <main style={{ ...D.main, marginLeft: isMobile ? 0 : '240px' }}>
 
         {/* ── Header ── */}
         <motion.div style={D.header} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-          <div>
-            <h1 style={D.title}>{saludo}, Administrador 👋</h1>
-            <p style={D.subtitle}>{hoy}</p>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+            {isMobile && (
+              <button
+                onClick={toggle}
+                style={{ background: '#1a1a24', border: '1px solid #2a2a3a', color: '#f1f1f3', borderRadius: '10px', padding: '0.45rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '0.2rem', flexShrink: 0 }}
+              >
+                ☰
+              </button>
+            )}
+            <div>
+              <h1 style={D.title}>{saludo}, Administrador 👋</h1>
+              <p style={D.subtitle}>{hoy}</p>
+            </div>
           </div>
           <div style={D.searchBox}>
             <span style={{ fontSize: '0.9rem' }}>🔍</span>
