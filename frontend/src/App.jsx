@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { SidebarProvider } from './context/SidebarContext';
 import PrivateRoute from './components/ui/PrivateRoute';
 
 import Tienda from './pages/tienda/Tienda';
@@ -16,6 +17,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
+          <SidebarProvider>
           <Routes>
             {/* Tienda pública */}
             <Route path="/" element={<Tienda />} />
@@ -30,6 +32,7 @@ function App() {
 
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
+          </SidebarProvider>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useSidebar } from '../../context/SidebarContext';
 
 const links = [
   { to: '/admin',           icon: '▣',  label: 'Dashboard',  end: true },
@@ -11,6 +12,7 @@ const links = [
 export default function Sidebar() {
   const { admin, logout } = useAuth();
   const navigate = useNavigate();
+  const { open, toggle, isMobile } = useSidebar();
 
   const handleLogout = () => {
     logout();
@@ -18,59 +20,77 @@ export default function Sidebar() {
   };
 
   return (
-    <aside style={S.sidebar}>
-      {/* ── Brand ── */}
-      <div>
-        <div style={S.brand}>
-          <div style={S.brandIcon}>🍬</div>
-          <div>
-            <div style={S.brandName}>Mi Golosinería</div>
-            <div style={S.brandTag}>Panel Admin</div>
+    <>
+      {/* Overlay — mobile only, closes sidebar on click */}
+      {isMobile && open && (
+        <div style={S.overlay} onClick={toggle} />
+      )}
+
+      <aside style={{
+        ...S.sidebar,
+        left: isMobile && !open ? '-240px' : '0',
+        transition: 'left 0.3s ease',
+        zIndex: isMobile ? 110 : 100,
+      }}>
+        {/* ── Brand ── */}
+        <div>
+          <div style={S.brand}>
+            <div style={S.brandIcon}>🍬</div>
+            <div>
+              <div style={S.brandName}>Mi Golosinería</div>
+              <div style={S.brandTag}>Panel Admin</div>
+            </div>
           </div>
+
+          <div style={S.divider} />
+
+          {/* ── Admin info ── */}
+          <div style={S.adminInfo}>
+            <div style={S.adminAvatar}>
+              {admin?.nombre?.[0]?.toUpperCase() ?? 'A'}
+            </div>
+            <div>
+              <div style={S.adminName}>{admin?.nombre ?? 'Administrador'}</div>
+              <div style={S.adminRol}>{admin?.rol ?? 'admin'}</div>
+            </div>
+          </div>
+
+          <div style={S.divider} />
+
+          {/* ── Nav ── */}
+          <nav style={S.nav}>
+            <p style={S.navSection}>Gestión</p>
+            {links.map((l) => (
+              <NavLink
+                key={l.to}
+                to={l.to}
+                end={l.end}
+                onClick={() => isMobile && toggle()}
+                style={({ isActive }) => ({ ...S.link, ...(isActive ? S.linkActive : {}) })}
+              >
+                <span style={S.linkIcon}>{l.icon}</span>
+                <span>{l.label}</span>
+              </NavLink>
+            ))}
+          </nav>
         </div>
 
-        <div style={S.divider} />
-
-        {/* ── Admin info ── */}
-        <div style={S.adminInfo}>
-          <div style={S.adminAvatar}>
-            {admin?.nombre?.[0]?.toUpperCase() ?? 'A'}
-          </div>
-          <div>
-            <div style={S.adminName}>{admin?.nombre ?? 'Administrador'}</div>
-            <div style={S.adminRol}>{admin?.rol ?? 'admin'}</div>
-          </div>
-        </div>
-
-        <div style={S.divider} />
-
-        {/* ── Nav ── */}
-        <nav style={S.nav}>
-          <p style={S.navSection}>Gestión</p>
-          {links.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              end={l.end}
-              style={({ isActive }) => ({ ...S.link, ...(isActive ? S.linkActive : {}) })}
-            >
-              <span style={S.linkIcon}>{l.icon}</span>
-              <span>{l.label}</span>
-            </NavLink>
-          ))}
-        </nav>
-      </div>
-
-      {/* ── Logout ── */}
-      <button style={S.logoutBtn} onClick={handleLogout}>
-        <span>🚪</span>
-        <span>Cerrar sesión</span>
-      </button>
-    </aside>
+        {/* ── Logout ── */}
+        <button style={S.logoutBtn} onClick={handleLogout}>
+          <span>🚪</span>
+          <span>Cerrar sesión</span>
+        </button>
+      </aside>
+    </>
   );
 }
 
 const S = {
+  overlay: {
+    position: 'fixed', inset: 0,
+    background: 'rgba(0,0,0,0.55)',
+    zIndex: 109,
+  },
   sidebar: {
     width: '240px',
     minHeight: '100vh',
@@ -80,10 +100,10 @@ const S = {
     justifyContent: 'space-between',
     padding: '1.75rem 1rem',
     position: 'fixed',
-    top: 0, left: 0,
+    top: 0,
     borderRight: '1px solid #1e1e2e',
     fontFamily: "'Nunito', system-ui, sans-serif",
-    zIndex: 100,
+    overflowY: 'auto',
   },
 
   // Brand

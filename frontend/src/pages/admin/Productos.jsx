@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Eye, EyeOff, Search, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, Search, X, Menu } from 'lucide-react';
 import Sidebar from '../../components/admin/Sidebar';
+import { useSidebar } from '../../context/SidebarContext';
 import {
   getProductosAdmin, crearProducto, editarProducto,
   eliminarProducto, toggleVisibilidad, subirImagen
 } from '../../api/productosApi';
 import { getCategorias } from '../../api/adminApi';
+
+const ITEMS_POR_PAGINA = 20;
 
 const emptyForm = {
   nombre: '', descripcion: '', precio: '',
@@ -25,6 +28,7 @@ const fadeUp = {
 function ModalProducto({ editId, form, setForm, categorias, onCerrar, onGuardar }) {
   const [imagenPreview, setImagenPreview] = useState(form.imagen_url || null);
   const [subiendoImagen, setSubiendoImagen] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const handleImagen = async (e) => {
     const file = e.target.files[0];
@@ -37,7 +41,7 @@ function ModalProducto({ editId, form, setForm, categorias, onCerrar, onGuardar 
       setForm((prev) => ({ ...prev, imagen_url: data.url }));
       setImagenPreview(data.url);
     } catch {
-      alert('Error al subir la imagen');
+      setFormError('Error al subir la imagen');
     } finally {
       setSubiendoImagen(false);
     }
@@ -45,7 +49,35 @@ function ModalProducto({ editId, form, setForm, categorias, onCerrar, onGuardar 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await onGuardar(subiendoImagen);
+    setFormError('');
+
+    const nombre = form.nombre?.trim() ?? '';
+    if (nombre.length < 2 || nombre.length > 150) {
+      setFormError('El nombre debe tener entre 2 y 150 caracteres');
+      return;
+    }
+    if (!form.categoria) {
+      setFormError('Seleccioná una categoría');
+      return;
+    }
+    if (!form.precio || isNaN(parseFloat(form.precio)) || parseFloat(form.precio) <= 0) {
+      setFormError('El precio de venta debe ser mayor a 0');
+      return;
+    }
+    if (form.precio_costo === '' || isNaN(parseFloat(form.precio_costo)) || parseFloat(form.precio_costo) < 0) {
+      setFormError('El precio de costo no puede ser negativo');
+      return;
+    }
+    if (form.stock === '' || isNaN(parseInt(form.stock)) || parseInt(form.stock) < 0) {
+      setFormError('El stock no puede ser negativo');
+      return;
+    }
+
+    try {
+      await onGuardar();
+    } catch (err) {
+      setFormError(err.response?.data?.error || 'Error al guardar el producto');
+    }
   };
 
   return (
@@ -65,7 +97,8 @@ function ModalProducto({ editId, form, setForm, categorias, onCerrar, onGuardar 
             <div>
               <label style={modal.label}>Nombre *</label>
               <input style={modal.input} value={form.nombre}
-                onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
+                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                maxLength={150} required />
             </div>
             <div>
               <label style={modal.label}>Categoría *</label>
@@ -115,10 +148,16 @@ function ModalProducto({ editId, form, setForm, categorias, onCerrar, onGuardar 
               <label style={modal.label}>Descripción</label>
               <input style={modal.input} value={form.descripcion}
                 onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-                placeholder="Descripción opcional..." />
+                placeholder="Descripción opcional..."
+                maxLength={300} />
             </div>
           </div>
 
+          {formError && (
+            <p style={{ color: '#f87171', fontSize: '0.875rem', textAlign: 'center', margin: '0' }}>
+              {formError}
+            </p>
+          )}
           <div style={modal.acciones}>
             <button type="button" style={modal.btnSecundario} onClick={onCerrar}>Cancelar</button>
             <button type="submit" style={modal.btnPrimario} disabled={subiendoImagen}>
@@ -132,6 +171,7 @@ function ModalProducto({ editId, form, setForm, categorias, onCerrar, onGuardar 
 }
 
 export default function Productos() {
+  const { toggle, isMobile } = useSidebar();
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [form, setForm] = useState(emptyForm);
@@ -139,6 +179,7 @@ export default function Productos() {
   const [showForm, setShowForm] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [filtroCat, setFiltroCat] = useState('');
+  const [pagina, setPagina] = useState(1);
 
   const cargar = () => getProductosAdmin().then(({ data }) => setProductos(data));
 
@@ -146,6 +187,8 @@ export default function Productos() {
     cargar();
     getCategorias().then(({ data }) => setCategorias(data));
   }, []);
+
+  useEffect(() => { setPagina(1); }, [busqueda, filtroCat]);
 
   const handleGuardar = async () => {
     if (editId) {
@@ -162,12 +205,12 @@ export default function Productos() {
   const handleEditar = (p) => {
     setForm({
       nombre: p.nombre,
-      descripcion: '',
+      descripcion: p.descripcion || '',
       precio: p.precio,
       precio_costo: p.precio_costo,
       categoria: p.categoria,
       stock: p.stock,
-      imagen_url: p.imagenUrl || ''
+      imagen_url: p.imagen_url || ''
     });
     setEditId(p.id);
     setShowForm(true);
@@ -191,12 +234,25 @@ export default function Productos() {
     return matchSearch && matchCat;
   });
 
+  const totalPaginas = Math.ceil(productosFiltrados.length / ITEMS_POR_PAGINA);
+  const productosPaginados = productosFiltrados.slice(
+    (pagina - 1) * ITEMS_POR_PAGINA,
+    pagina * ITEMS_POR_PAGINA
+  );
+
   return (
     <div style={styles.layout}>
       <Sidebar />
-      <main style={styles.main}>
+      <main style={{ ...styles.main, marginLeft: isMobile ? 0 : '240px' }}>
         <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={0} style={styles.header}>
-          <h1 style={styles.title}>🍬 Productos</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {isMobile && (
+              <button style={styles.btnHamburger} onClick={toggle}>
+                <Menu size={22} />
+              </button>
+            )}
+            <h1 style={styles.title}>🍬 Productos</h1>
+          </div>
           <button style={styles.btnPrimary} onClick={() => { setForm(emptyForm); setEditId(null); setShowForm(true); }}>
             <Plus size={16} style={{ marginRight: '0.4rem' }} />
             Nuevo producto
@@ -227,7 +283,7 @@ export default function Productos() {
           variants={fadeUp} initial="hidden" animate="visible" custom={2}
           style={styles.grid}
         >
-          {productosFiltrados.map((p, idx) => (
+          {productosPaginados.map((p, idx) => (
             <motion.div
               key={p.id}
               variants={fadeUp}
@@ -239,8 +295,8 @@ export default function Productos() {
               onMouseLeave={e => e.currentTarget.style.borderColor = '#2a2a3a'}
             >
               <div style={styles.cardImgWrapper}>
-                {p.imagenUrl
-                  ? <img src={p.imagenUrl} alt={p.nombre} style={styles.cardImg} />
+                {p.imagen_url
+                  ? <img src={p.imagen_url} alt={p.nombre} style={styles.cardImg} />
                   : <div style={styles.cardImgPlaceholder}>🍬</div>
                 }
                 <span style={styles.categoriaBadge}>{p.categoria}</span>
@@ -289,6 +345,26 @@ export default function Productos() {
             </div>
           )}
         </motion.div>
+
+        {totalPaginas > 1 && (
+          <div style={styles.pagination}>
+            <button
+              style={{ ...styles.btnPag, opacity: pagina === 1 ? 0.4 : 1 }}
+              disabled={pagina === 1}
+              onClick={() => setPagina(p => p - 1)}
+            >
+              ← Anterior
+            </button>
+            <span style={styles.paginaInfo}>Página {pagina} de {totalPaginas}</span>
+            <button
+              style={{ ...styles.btnPag, opacity: pagina === totalPaginas ? 0.4 : 1 }}
+              disabled={pagina === totalPaginas}
+              onClick={() => setPagina(p => p + 1)}
+            >
+              Siguiente →
+            </button>
+          </div>
+        )}
       </main>
 
       {showForm && (
@@ -308,7 +384,7 @@ export default function Productos() {
 const styles = {
   layout: { display: 'flex' },
   main: {
-    marginLeft: '240px', padding: '2rem 2.5rem', flex: 1,
+    padding: '2rem 2.5rem', flex: 1,
     background: '#0f0f13', minHeight: '100vh',
     fontFamily: "'Nunito', system-ui, sans-serif", color: '#f1f1f3',
   },
@@ -319,6 +395,11 @@ const styles = {
     border: 'none', padding: '0.65rem 1.4rem', borderRadius: '12px', cursor: 'pointer',
     fontWeight: '700', fontSize: '0.9rem', boxShadow: '0 4px 14px rgba(168,85,247,0.35)',
     fontFamily: 'inherit', display: 'flex', alignItems: 'center',
+  },
+  btnHamburger: {
+    background: '#1a1a24', border: '1px solid #2a2a3a', color: '#f1f1f3',
+    borderRadius: '10px', padding: '0.45rem', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   filtros: { display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' },
   searchWrapper: {
@@ -387,6 +468,16 @@ const styles = {
     background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
     color: '#f87171', borderRadius: '8px', width: '30px', height: '30px',
     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  pagination: {
+    display: 'flex', justifyContent: 'center', alignItems: 'center',
+    gap: '1rem', marginTop: '2rem', paddingBottom: '2rem',
+  },
+  paginaInfo: { color: '#8b8b9e', fontSize: '0.88rem', fontWeight: '600' },
+  btnPag: {
+    background: '#1a1a24', border: '1px solid #2a2a3a', color: '#a855f7',
+    borderRadius: '10px', padding: '0.5rem 1.25rem', cursor: 'pointer',
+    fontWeight: '700', fontSize: '0.88rem', fontFamily: 'inherit',
   },
 };
 

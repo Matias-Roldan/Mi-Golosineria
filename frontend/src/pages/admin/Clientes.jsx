@@ -4,7 +4,7 @@ import { Search, Plus, Pencil, ChevronDown, ChevronUp, X } from 'lucide-react';
 import Sidebar from '../../components/admin/Sidebar';
 import { getClientes, getPerfilCliente, editarCliente, crearCliente } from '../../api/clientesApi';
 
-const emptyForm = { nombre: '', telefono: '', direccion: '' };
+const emptyForm = { nombre: '', telefono: '', direccion: '', email: '' };
 
 const estadoColor = {
   pendiente:  { bg: 'rgba(245,158,11,0.15)',  color: '#f59e0b'  },
@@ -36,7 +36,7 @@ function avatarColor(nombre) {
 function ModalCliente({ cliente, onCerrar, onGuardado }) {
   const [form, setForm] = useState(
     cliente
-      ? { nombre: cliente.nombre, telefono: cliente.telefono, direccion: cliente.direccion || '' }
+      ? { nombre: cliente.nombre, telefono: cliente.telefono, direccion: cliente.direccion || '', email: cliente.email || '' }
       : emptyForm
   );
   const [loading, setLoading] = useState(false);
@@ -92,6 +92,12 @@ function ModalCliente({ cliente, onCerrar, onGuardado }) {
               onChange={(e) => setForm({ ...form, direccion: e.target.value })}
               placeholder="Ej: Av. Corrientes 1234, CABA" />
           </div>
+          <div>
+            <label style={modal.label}>Email</label>
+            <input style={modal.input} type="email" value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              placeholder="Ej: cliente@email.com" />
+          </div>
           {error && <p style={modal.error}>{error}</p>}
           <div style={modal.acciones}>
             <button type="button" style={modal.btnSecundario} onClick={onCerrar}>Cancelar</button>
@@ -139,6 +145,7 @@ function FilaCliente({ c, onVerPerfil, onEditar }) {
             </div>
             <div>
               <div style={styles.clienteNombre}>{c.nombre}</div>
+              {c.email && <div style={styles.clienteDir}>{c.email}</div>}
               {c.direccion && <div style={styles.clienteDir}>{c.direccion}</div>}
             </div>
           </div>

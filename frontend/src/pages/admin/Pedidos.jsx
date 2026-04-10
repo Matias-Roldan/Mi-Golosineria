@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Plus, X, Eye, Pencil, Filter } from 'lucide-react';
+import { Search, Plus, X, Eye, Pencil, Filter, Menu } from 'lucide-react';
 import Sidebar from '../../components/admin/Sidebar';
+import { useSidebar } from '../../context/SidebarContext';
 import { getPedidosAdmin, getDetallePedido, cambiarEstado, editarPedido } from '../../api/pedidosApi';
 import { registrarPedido } from '../../api/pedidosApi';
 import { getProductosAdmin } from '../../api/productosApi';
 import { getClientes } from '../../api/clientesApi';
 
 const ESTADOS = ['pendiente', 'confirmado', 'entregado', 'cancelado'];
+const ITEMS_POR_PAGINA = 20;
 
 const estadoBadge = {
   pendiente:  { bg: 'rgba(245,158,11,0.15)',  color: '#f59e0b',  border: 'rgba(245,158,11,0.3)'  },
@@ -109,7 +111,8 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
             {tab === 'buscar' && (
               <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
                 <input style={modal.input} placeholder="Buscar por nombre o teléfono..."
-                  value={busqueda} onChange={(e) => buscarCliente(e.target.value)} />
+                  value={busqueda} onChange={(e) => buscarCliente(e.target.value)}
+                  maxLength={100} />
                 {clientesFiltrados.length > 0 && (
                   <div style={modal.dropdown}>
                     {clientesFiltrados.map(c => (
@@ -127,20 +130,21 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
                 <label style={modal.label}>Nombre *</label>
                 <input style={modal.input} value={form.nombre_cliente}
                   onChange={(e) => setForm({ ...form, nombre_cliente: e.target.value })}
-                  placeholder="Nombre del cliente" required />
+                  placeholder="Nombre del cliente" required maxLength={100} />
               </div>
               <div>
                 <label style={modal.label}>Teléfono *</label>
                 <input style={modal.input} value={form.telefono}
-                  onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-                  placeholder="Ej: 5491155556666" required />
+                  onChange={(e) => setForm({ ...form, telefono: e.target.value.replace(/\D/g, '') })}
+                  placeholder="Ej: 5491155556666" required inputMode="numeric" maxLength={20} />
               </div>
             </div>
             <div>
               <label style={modal.label}>Notas</label>
               <input style={modal.input} value={form.notas}
                 onChange={(e) => setForm({ ...form, notas: e.target.value })}
-                placeholder="Dirección, aclaraciones..." />
+                placeholder="Dirección, aclaraciones..."
+                maxLength={500} />
             </div>
           </div>
 
@@ -199,11 +203,7 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
 
 // ── Modal Editar Pedido ─────────────────────────────────────────────
 function ModalEditarPedido({ pedido, onCerrar, onGuardado }) {
-  const [form, setForm] = useState({
-    nombre_cliente: pedido.nombreCliente,
-    telefono: pedido.telefono,
-    notas: pedido.notas || ''
-  });
+  const [notas, setNotas] = useState(pedido.notas || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -212,7 +212,7 @@ function ModalEditarPedido({ pedido, onCerrar, onGuardado }) {
     setLoading(true);
     setError('');
     try {
-      await editarPedido(pedido.id, form);
+      await editarPedido(pedido.id, { notas });
       onGuardado();
       onCerrar();
     } catch (err) {
@@ -231,22 +231,13 @@ function ModalEditarPedido({ pedido, onCerrar, onGuardado }) {
         </div>
         <form onSubmit={handleSubmit} style={modal.body}>
           <div>
-            <label style={modal.label}>Nombre cliente *</label>
-            <input style={modal.input} value={form.nombre_cliente}
-              onChange={(e) => setForm({ ...form, nombre_cliente: e.target.value })} required />
-          </div>
-          <div>
-            <label style={modal.label}>Teléfono *</label>
-            <input style={modal.input} value={form.telefono}
-              onChange={(e) => setForm({ ...form, telefono: e.target.value })} required />
-          </div>
-          <div>
             <label style={modal.label}>Notas</label>
             <textarea
               style={{ ...modal.input, resize: 'vertical', minHeight: '80px' }}
-              value={form.notas}
-              onChange={(e) => setForm({ ...form, notas: e.target.value })}
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
               placeholder="Dirección, aclaraciones..."
+              maxLength={500}
             />
           </div>
           {error && <p style={{ color: '#f87171', fontSize: '0.875rem' }}>{error}</p>}
@@ -264,6 +255,7 @@ function ModalEditarPedido({ pedido, onCerrar, onGuardado }) {
 
 // ── Página Principal ────────────────────────────────────────────────
 export default function Pedidos() {
+  const { toggle, isMobile } = useSidebar();
   const [pedidos, setPedidos] = useState([]);
   const [detalle, setDetalle] = useState(null);
   const [pedidoSel, setPedidoSel] = useState(null);
@@ -271,9 +263,12 @@ export default function Pedidos() {
   const [pedidoAEditar, setPedidoAEditar] = useState(null);
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todos');
+  const [pagina, setPagina] = useState(1);
 
   const cargar = () => getPedidosAdmin().then(({ data }) => setPedidos(data));
   useEffect(() => { cargar(); }, []);
+
+  useEffect(() => { setPagina(1); }, [busqueda, filtroEstado]);
 
   const verDetalle = async (pedido) => {
     const { data } = await getDetallePedido(pedido.id);
@@ -299,12 +294,25 @@ export default function Pedidos() {
     return matchBusqueda && matchEstado;
   });
 
+  const totalPaginas = Math.ceil(pedidosFiltrados.length / ITEMS_POR_PAGINA);
+  const pedidosPaginados = pedidosFiltrados.slice(
+    (pagina - 1) * ITEMS_POR_PAGINA,
+    pagina * ITEMS_POR_PAGINA
+  );
+
   return (
     <div style={styles.layout}>
       <Sidebar />
-      <main style={styles.main}>
+      <main style={{ ...styles.main, marginLeft: isMobile ? 0 : '240px' }}>
         <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={0} style={styles.header}>
-          <h1 style={styles.title}>🛒 Pedidos</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {isMobile && (
+              <button style={styles.btnHamburger} onClick={toggle}>
+                <Menu size={22} />
+              </button>
+            )}
+            <h1 style={styles.title}>🛒 Pedidos</h1>
+          </div>
           <button style={styles.btnPrimary} onClick={() => setMostrarModal(true)}>
             <Plus size={16} style={{ marginRight: '0.4rem' }} />
             Nuevo pedido
@@ -349,7 +357,7 @@ export default function Pedidos() {
                 </tr>
               </thead>
               <tbody>
-                {pedidosFiltrados.map((p, idx) => {
+                {pedidosPaginados.map((p) => {
                   const badge = estadoBadge[p.estado] || estadoBadge.pendiente;
                   return (
                     <tr key={p.id} style={styles.tr}
@@ -414,6 +422,26 @@ export default function Pedidos() {
                 )}
               </tbody>
             </table>
+
+            {totalPaginas > 1 && (
+              <div style={styles.pagination}>
+                <button
+                  style={{ ...styles.btnPag, opacity: pagina === 1 ? 0.4 : 1 }}
+                  disabled={pagina === 1}
+                  onClick={() => setPagina(p => p - 1)}
+                >
+                  ← Anterior
+                </button>
+                <span style={styles.paginaInfo}>Página {pagina} de {totalPaginas}</span>
+                <button
+                  style={{ ...styles.btnPag, opacity: pagina === totalPaginas ? 0.4 : 1 }}
+                  disabled={pagina === totalPaginas}
+                  onClick={() => setPagina(p => p + 1)}
+                >
+                  Siguiente →
+                </button>
+              </div>
+            )}
           </div>
 
           {pedidoSel && (
@@ -486,7 +514,7 @@ export default function Pedidos() {
 const styles = {
   layout: { display: 'flex' },
   main: {
-    marginLeft: '240px', padding: '2rem 2.5rem', flex: 1,
+    padding: '2rem 2.5rem', flex: 1,
     background: '#0f0f13', minHeight: '100vh',
     fontFamily: "'Nunito', system-ui, sans-serif", color: '#f1f1f3',
   },
@@ -497,6 +525,11 @@ const styles = {
     border: 'none', padding: '0.65rem 1.4rem', borderRadius: '12px', cursor: 'pointer',
     fontWeight: '700', fontSize: '0.9rem', boxShadow: '0 4px 14px rgba(168,85,247,0.35)',
     fontFamily: 'inherit', display: 'flex', alignItems: 'center',
+  },
+  btnHamburger: {
+    background: '#1a1a24', border: '1px solid #2a2a3a', color: '#f1f1f3',
+    borderRadius: '10px', padding: '0.45rem', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   filtros: { display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' },
   searchWrapper: {
@@ -556,6 +589,16 @@ const styles = {
     marginTop: '1rem', background: '#12121a', border: '1px solid #2a2a3a',
     color: '#a855f7', padding: '0.6rem 1rem', borderRadius: '10px', cursor: 'pointer',
     width: '100%', fontWeight: '700', fontFamily: 'inherit', fontSize: '0.875rem',
+  },
+  pagination: {
+    display: 'flex', justifyContent: 'center', alignItems: 'center',
+    gap: '1rem', padding: '1.25rem',
+  },
+  paginaInfo: { color: '#8b8b9e', fontSize: '0.88rem', fontWeight: '600' },
+  btnPag: {
+    background: '#12121a', border: '1px solid #2a2a3a', color: '#a855f7',
+    borderRadius: '10px', padding: '0.5rem 1.25rem', cursor: 'pointer',
+    fontWeight: '700', fontSize: '0.88rem', fontFamily: 'inherit',
   },
 };
 

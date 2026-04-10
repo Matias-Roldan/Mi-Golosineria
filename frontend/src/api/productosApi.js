@@ -1,7 +1,7 @@
 import api from './axios';
 
 export const getProductosDisponibles = () => api.get('/productos');
-export const getProductosPorCategoria = (categoria) => api.get(`/productos/categoria/${categoria}`);
+export const getProductosPorCategoria = (categoriaId) => api.get(`/productos/categoria/${categoriaId}`);
 
 // Admin
 export const getProductosAdmin = () => api.get('/productos/admin');
