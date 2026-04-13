@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Plus, Pencil, ChevronDown, ChevronUp, X, Menu } from 'lucide-react';
 import Sidebar from '../../components/admin/Sidebar';
-import { useSidebar } from '../../context/SidebarContext';
+import { useSidebar } from '../../stores/useSidebarStore';
 import { getClientes, getPerfilCliente, editarCliente, crearCliente } from '../../api/clientesApi';
 
 const ITEMS_POR_PAGINA = 20;
@@ -36,31 +37,30 @@ function avatarColor(nombre) {
 
 // ── Modal Crear/Editar Cliente ──────────────────────────────────────
 function ModalCliente({ cliente, onCerrar, onGuardado }) {
+  const queryClient = useQueryClient();
   const [form, setForm] = useState(
     cliente
       ? { nombre: cliente.nombre, telefono: cliente.telefono, direccion: cliente.direccion || '', email: cliente.email || '' }
       : emptyForm
   );
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      if (cliente) {
-        await editarCliente(cliente.id, form);
-      } else {
-        await crearCliente(form);
-      }
+  const mutation = useMutation({
+    mutationFn: (data) => cliente ? editarCliente(cliente.id, data) : crearCliente(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
       onGuardado();
       onCerrar();
-    } catch (err) {
+    },
+    onError: (err) => {
       setError(err.response?.data?.error || 'Error al guardar cliente');
-    } finally {
-      setLoading(false);
-    }
+    },
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError('');
+    mutation.mutate(form);
   };
 
   return (
@@ -103,8 +103,8 @@ function ModalCliente({ cliente, onCerrar, onGuardado }) {
           {error && <p style={modal.error}>{error}</p>}
           <div style={modal.acciones}>
             <button type="button" style={modal.btnSecundario} onClick={onCerrar}>Cancelar</button>
-            <button type="submit" style={modal.btnPrimario} disabled={loading}>
-              {loading ? 'Guardando...' : '✅ Guardar'}
+            <button type="submit" style={modal.btnPrimario} disabled={mutation.isPending}>
+              {mutation.isPending ? 'Guardando...' : '✅ Guardar'}
             </button>
           </div>
         </form>
@@ -116,21 +116,15 @@ function ModalCliente({ cliente, onCerrar, onGuardado }) {
 // ── Fila expandible con historial ───────────────────────────────────
 function FilaCliente({ c, onEditar }) {
   const [expandido, setExpandido] = useState(false);
-  const [historial, setHistorial] = useState(null);
-  const [cargando, setCargando] = useState(false);
 
-  const toggleExpand = async () => {
-    if (!expandido && !historial) {
-      setCargando(true);
-      try {
-        const { data } = await getPerfilCliente(c.id);
-        setHistorial(data);
-      } finally {
-        setCargando(false);
-      }
-    }
-    setExpandido(!expandido);
-  };
+  const { data: historial, isLoading: cargando } = useQuery({
+    queryKey: ['perfilCliente', c.id],
+    queryFn: () => getPerfilCliente(c.id).then(r => r.data),
+    enabled: expandido,
+    staleTime: Infinity,
+  });
+
+  const toggleExpand = () => setExpandido(!expandido);
 
   const color = avatarColor(c.nombre);
 
@@ -223,15 +217,20 @@ function FilaCliente({ c, onEditar }) {
 // ── Página Principal ────────────────────────────────────────────────
 export default function Clientes() {
   const { toggle, isMobile } = useSidebar();
-  const [clientes, setClientes] = useState([]);
   const [modalCliente, setModalCliente] = useState(null);
   const [busqueda, setBusqueda] = useState('');
   const [pagina, setPagina] = useState(1);
 
-  const cargar = () => getClientes().then(({ data }) => setClientes(data));
-  useEffect(() => { cargar(); }, []);
+  const { data: clientes = [] } = useQuery({
+    queryKey: ['clientes'],
+    queryFn: () => getClientes().then(r => r.data),
+  });
 
-  useEffect(() => { setPagina(1); }, [busqueda]);
+  // Reset página al cambiar búsqueda
+  const handleBusqueda = (valor) => {
+    setBusqueda(valor);
+    setPagina(1);
+  };
 
   const clientesFiltrados = clientes.filter(c =>
     c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -270,7 +269,7 @@ export default function Clientes() {
               style={styles.searchInput}
               placeholder="Buscar por nombre o teléfono..."
               value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
+              onChange={(e) => handleBusqueda(e.target.value)}
             />
           </div>
           <span style={styles.totalLabel}>
@@ -334,7 +333,7 @@ export default function Clientes() {
         <ModalCliente
           cliente={modalCliente === 'nuevo' ? null : modalCliente}
           onCerrar={() => setModalCliente(null)}
-          onGuardado={() => { cargar(); setModalCliente(null); }}
+          onGuardado={() => setModalCliente(null)}
         />
       )}
     </div>

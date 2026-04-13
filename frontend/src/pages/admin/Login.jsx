@@ -1,24 +1,33 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const schema = z.object({
+  email: z.string().min(1, 'El email es requerido').email('Email inválido'),
+  password: z.string().min(1, 'La contraseña es requerida'),
+});
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [serverError, setServerError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(schema),
+  });
+
+  const onSubmit = async (data) => {
+    setServerError('');
     setLoading(true);
     try {
-      await login(email, password);
+      await login(data.email, data.password);
       navigate('/admin');
     } catch {
-      setError('Email o contraseña incorrectos');
+      setServerError('Email o contraseña incorrectos');
     } finally {
       setLoading(false);
     }
@@ -29,30 +38,28 @@ export default function Login() {
       <div style={styles.card}>
         <h2 style={styles.title}>🍬 Mi Golosinería</h2>
         <p style={styles.subtitle}>Panel de Administración</p>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <div style={styles.field}>
             <label style={styles.label}>Email</label>
             <input
               style={styles.input}
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@email.com"
-              required
+              {...register('email')}
             />
+            {errors.email && <p style={styles.error}>{errors.email.message}</p>}
           </div>
           <div style={styles.field}>
             <label style={styles.label}>Contraseña</label>
             <input
               style={styles.input}
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              required
+              {...register('password')}
             />
+            {errors.password && <p style={styles.error}>{errors.password.message}</p>}
           </div>
-          {error && <p style={styles.error}>{error}</p>}
+          {serverError && <p style={styles.error}>{serverError}</p>}
           <button style={styles.button} type="submit" disabled={loading}>
             {loading ? 'Ingresando...' : 'Ingresar'}
           </button>

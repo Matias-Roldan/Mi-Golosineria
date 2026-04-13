@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Search, Plus, X, Eye, Pencil, Filter, Menu } from 'lucide-react';
 import Sidebar from '../../components/admin/Sidebar';
-import { useSidebar } from '../../context/SidebarContext';
+import { useSidebar } from '../../stores/useSidebarStore';
 import { getPedidosAdmin, getDetallePedido, cambiarEstado, editarPedido } from '../../api/pedidosApi';
 import { registrarPedido } from '../../api/pedidosApi';
 import { getProductosAdmin } from '../../api/productosApi';
@@ -28,20 +29,28 @@ const fadeUp = {
 
 // ── Modal Nuevo Pedido ──────────────────────────────────────────────
 function ModalNuevoPedido({ onCerrar, onCreado }) {
-  const [productos, setProductos] = useState([]);
-  const [clientes, setClientes] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [clientesFiltrados, setClientesFiltrados] = useState([]);
   const [form, setForm] = useState({ nombre_cliente: '', telefono: '', notas: '' });
   const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [tab, setTab] = useState('manual');
 
-  useEffect(() => {
-    getProductosAdmin().then(({ data }) => setProductos(data.filter(p => p.stock > 0)));
-    getClientes().then(({ data }) => setClientes(data));
-  }, []);
+  const { data: productos = [] } = useQuery({
+    queryKey: ['productosAdmin'],
+    queryFn: () => getProductosAdmin().then(({ data }) => data.filter(p => p.stock > 0)),
+  });
+
+  const { data: clientes = [] } = useQuery({
+    queryKey: ['clientes'],
+    queryFn: () => getClientes().then(({ data }) => data),
+  });
+
+  const registrarMutation = useMutation({
+    mutationFn: registrarPedido,
+    onSuccess: () => { onCreado(); onCerrar(); },
+    onError: (err) => setError(err.response?.data?.error || 'Error al crear el pedido'),
+  });
 
   const buscarCliente = (texto) => {
     setBusqueda(texto);
@@ -73,25 +82,16 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
 
   const total = items.reduce((acc, i) => acc + i.precio * i.cantidad, 0);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (items.length === 0) return setError('Agregá al menos un producto');
-    setLoading(true);
     setError('');
-    try {
-      await registrarPedido({
-        nombre_cliente: form.nombre_cliente,
-        telefono: form.telefono,
-        notas: form.notas,
-        items: items.map(i => ({ id: i.id, cant: i.cantidad }))
-      });
-      onCreado();
-      onCerrar();
-    } catch (err) {
-      setError(err.response?.data?.error || 'Error al crear el pedido');
-    } finally {
-      setLoading(false);
-    }
+    registrarMutation.mutate({
+      nombre_cliente: form.nombre_cliente,
+      telefono: form.telefono,
+      notas: form.notas,
+      items: items.map(i => ({ id: i.id, cant: i.cantidad })),
+    });
   };
 
   return (
@@ -191,8 +191,8 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
           {error && <p style={modal.error}>{error}</p>}
           <div style={modal.acciones}>
             <button type="button" style={modal.btnSecundario} onClick={onCerrar}>Cancelar</button>
-            <button type="submit" style={modal.btnPrimario} disabled={loading}>
-              {loading ? 'Creando...' : '✅ Crear pedido'}
+            <button type="submit" style={modal.btnPrimario} disabled={registrarMutation.isPending}>
+              {registrarMutation.isPending ? 'Creando...' : '✅ Crear pedido'}
             </button>
           </div>
         </form>
@@ -204,22 +204,18 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
 // ── Modal Editar Pedido ─────────────────────────────────────────────
 function ModalEditarPedido({ pedido, onCerrar, onGuardado }) {
   const [notas, setNotas] = useState(pedido.notas || '');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
+  const editarMutation = useMutation({
+    mutationFn: ({ id, notas }) => editarPedido(id, { notas }),
+    onSuccess: () => { onGuardado(); onCerrar(); },
+    onError: (err) => setError(err.response?.data?.error || 'Error al editar pedido'),
+  });
+
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
-    try {
-      await editarPedido(pedido.id, { notas });
-      onGuardado();
-      onCerrar();
-    } catch (err) {
-      setError(err.response?.data?.error || 'Error al editar pedido');
-    } finally {
-      setLoading(false);
-    }
+    editarMutation.mutate({ id: pedido.id, notas });
   };
 
   return (
@@ -243,8 +239,8 @@ function ModalEditarPedido({ pedido, onCerrar, onGuardado }) {
           {error && <p style={{ color: '#f87171', fontSize: '0.875rem' }}>{error}</p>}
           <div style={modal.acciones}>
             <button type="button" style={modal.btnSecundario} onClick={onCerrar}>Cancelar</button>
-            <button type="submit" style={modal.btnPrimario} disabled={loading}>
-              {loading ? 'Guardando...' : '✅ Guardar'}
+            <button type="submit" style={modal.btnPrimario} disabled={editarMutation.isPending}>
+              {editarMutation.isPending ? 'Guardando...' : '✅ Guardar'}
             </button>
           </div>
         </form>
@@ -256,8 +252,7 @@ function ModalEditarPedido({ pedido, onCerrar, onGuardado }) {
 // ── Página Principal ────────────────────────────────────────────────
 export default function Pedidos() {
   const { toggle, isMobile } = useSidebar();
-  const [pedidos, setPedidos] = useState([]);
-  const [detalle, setDetalle] = useState(null);
+  const queryClient = useQueryClient();
   const [pedidoSel, setPedidoSel] = useState(null);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [pedidoAEditar, setPedidoAEditar] = useState(null);
@@ -265,26 +260,33 @@ export default function Pedidos() {
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [pagina, setPagina] = useState(1);
 
-  const cargar = () => getPedidosAdmin().then(({ data }) => setPedidos(data));
-  useEffect(() => { cargar(); }, []);
+  const { data: pedidos = [] } = useQuery({
+    queryKey: ['pedidosAdmin'],
+    queryFn: () => getPedidosAdmin().then(({ data }) => data),
+  });
+
+  const { data: detalle } = useQuery({
+    queryKey: ['detallePedido', pedidoSel?.id],
+    queryFn: () => getDetallePedido(pedidoSel.id).then(({ data }) => data),
+    enabled: !!pedidoSel,
+  });
+
+  const refetchPedidos = () => queryClient.invalidateQueries({ queryKey: ['pedidosAdmin'] });
+
+  const cambiarEstadoMutation = useMutation({
+    mutationFn: ({ id, estado }) => cambiarEstado(id, estado),
+    onSuccess: (_, { id, estado }) => {
+      refetchPedidos();
+      if (pedidoSel?.id === id) setPedidoSel(prev => ({ ...prev, estado }));
+    },
+    onError: (err) => alert(err.response?.data?.error || 'Error al cambiar estado'),
+  });
 
   useEffect(() => { setPagina(1); }, [busqueda, filtroEstado]);
 
-  const verDetalle = async (pedido) => {
-    const { data } = await getDetallePedido(pedido.id);
-    setDetalle(data);
-    setPedidoSel(pedido);
-  };
+  const verDetalle = (pedido) => setPedidoSel(pedido);
 
-  const handleEstado = async (id, estado) => {
-    try {
-      await cambiarEstado(id, estado);
-      cargar();
-      if (pedidoSel?.id === id) setPedidoSel({ ...pedidoSel, estado });
-    } catch (err) {
-      alert(err.response?.data?.error || 'Error al cambiar estado');
-    }
-  };
+  const handleEstado = (id, estado) => cambiarEstadoMutation.mutate({ id, estado });
 
   const pedidosFiltrados = pedidos.filter(p => {
     const matchBusqueda = !busqueda ||
@@ -493,7 +495,7 @@ export default function Pedidos() {
                   ${Number(pedidoSel.total).toLocaleString('es-AR')}
                 </span>
               </div>
-              <button style={styles.btnCerrar} onClick={() => { setDetalle(null); setPedidoSel(null); }}>
+              <button style={styles.btnCerrar} onClick={() => setPedidoSel(null)}>
                 Cerrar
               </button>
             </motion.div>
@@ -502,10 +504,10 @@ export default function Pedidos() {
       </main>
 
       {mostrarModal && (
-        <ModalNuevoPedido onCerrar={() => setMostrarModal(false)} onCreado={cargar} />
+        <ModalNuevoPedido onCerrar={() => setMostrarModal(false)} onCreado={refetchPedidos} />
       )}
       {pedidoAEditar && (
-        <ModalEditarPedido pedido={pedidoAEditar} onCerrar={() => setPedidoAEditar(null)} onGuardado={cargar} />
+        <ModalEditarPedido pedido={pedidoAEditar} onCerrar={() => setPedidoAEditar(null)} onGuardado={refetchPedidos} />
       )}
     </div>
   );

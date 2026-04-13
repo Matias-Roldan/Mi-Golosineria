@@ -2,17 +2,37 @@ import { useState } from 'react';
 import { useCart } from '../../hooks/useCart';
 import { registrarPedido, validarCupon } from '../../api/pedidosApi';
 import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const schema = z.object({
+  nombre_cliente: z
+    .string()
+    .min(2, 'El nombre debe tener entre 2 y 100 caracteres.')
+    .max(100, 'El nombre debe tener entre 2 y 100 caracteres.'),
+  telefono: z
+    .string()
+    .regex(/^\d{7,20}$/, 'El teléfono debe contener solo dígitos (7-20 caracteres).'),
+  notas: z
+    .string()
+    .max(500, 'Las notas no pueden superar los 500 caracteres.'),
+});
 
 export default function FormularioPedido({ onCancelar }) {
   const { carrito, total, vaciar } = useCart();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ nombre_cliente: '', telefono: '', notas: '' });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [serverError, setServerError] = useState('');
   const [codigoCupon, setCodigoCupon] = useState('');
   const [cupon, setCupon] = useState(null);
   const [cuponError, setCuponError] = useState('');
   const [validandoCupon, setValidandoCupon] = useState(false);
+
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: { nombre_cliente: '', telefono: '', notas: '' },
+  });
 
   const aplicarCupon = async () => {
     if (!codigoCupon.trim()) return;
@@ -37,40 +57,29 @@ export default function FormularioPedido({ onCancelar }) {
 
   const totalFinal = cupon ? Math.max(0, total - (cupon.descuento_calculado ?? 0)) : total;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  const onSubmit = async (data) => {
+    setServerError('');
 
-    const nombreTrim = form.nombre_cliente.trim();
-    const telefonoTrim = form.telefono.trim();
-
-    if (nombreTrim.length < 2 || nombreTrim.length > 100) {
-      setError('El nombre debe tener entre 2 y 100 caracteres.');
-      return;
-    }
-    if (!/^\d{7,20}$/.test(telefonoTrim)) {
-      setError('El teléfono debe contener solo dígitos (7-20 caracteres).');
-      return;
-    }
-    if (form.notas && form.notas.length > 500) {
-      setError('Las notas no pueden superar los 500 caracteres.');
-      return;
-    }
     if (carrito.length === 0) {
-      setError('El carrito está vacío.');
+      setServerError('El carrito está vacío.');
       return;
     }
 
     setLoading(true);
     try {
       const items = carrito.map((p) => ({ id: p.id, cant: p.cantidad }));
-      const payload = { ...form, nombre_cliente: nombreTrim, telefono: telefonoTrim, items };
+      const payload = {
+        ...data,
+        nombre_cliente: data.nombre_cliente.trim(),
+        telefono: data.telefono.trim(),
+        items,
+      };
       if (cupon) payload.cupon = codigoCupon.trim();
-      const { data } = await registrarPedido(payload);
+      const { data: res } = await registrarPedido(payload);
       vaciar();
-      navigate('/confirmacion', { state: { pedido_id: data.pedido_id, nombre: nombreTrim } });
+      navigate('/confirmacion', { state: { pedido_id: res.pedido_id, nombre: data.nombre_cliente.trim() } });
     } catch (err) {
-      setError(err.response?.data?.error || 'Error al registrar el pedido');
+      setServerError(err.response?.data?.error || 'Error al registrar el pedido');
     } finally {
       setLoading(false);
     }
@@ -98,18 +107,39 @@ export default function FormularioPedido({ onCancelar }) {
             <span>${Number(totalFinal).toLocaleString('es-AR')}</span>
           </div>
         </div>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <div style={styles.field}>
             <label style={styles.label}>Tu nombre *</label>
-            <input style={styles.input} value={form.nombre_cliente} onChange={(e) => setForm({ ...form, nombre_cliente: e.target.value })} placeholder="Ej: Juan Pérez" required maxLength={100} />
+            <input
+              style={styles.input}
+              placeholder="Ej: Juan Pérez"
+              maxLength={100}
+              {...register('nombre_cliente')}
+            />
+            {errors.nombre_cliente && <p style={styles.error}>{errors.nombre_cliente.message}</p>}
           </div>
           <div style={styles.field}>
             <label style={styles.label}>WhatsApp / Teléfono *</label>
-            <input style={styles.input} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value.replace(/\D/g, '') })} placeholder="Ej: 1155556666" required maxLength={20} inputMode="numeric" />
+            <input
+              style={styles.input}
+              placeholder="Ej: 1155556666"
+              maxLength={20}
+              inputMode="numeric"
+              {...register('telefono', {
+                onChange: (e) => { e.target.value = e.target.value.replace(/\D/g, ''); },
+              })}
+            />
+            {errors.telefono && <p style={styles.error}>{errors.telefono.message}</p>}
           </div>
           <div style={styles.field}>
             <label style={styles.label}>Notas (opcional)</label>
-            <textarea style={{ ...styles.input, resize: 'vertical', minHeight: '70px' }} value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} placeholder="Dirección de entrega, aclaraciones..." maxLength={500} />
+            <textarea
+              style={{ ...styles.input, resize: 'vertical', minHeight: '70px' }}
+              placeholder="Dirección de entrega, aclaraciones..."
+              maxLength={500}
+              {...register('notas')}
+            />
+            {errors.notas && <p style={styles.error}>{errors.notas.message}</p>}
           </div>
           <div style={styles.field}>
             <label style={styles.label}>Cupón de descuento</label>
@@ -135,7 +165,7 @@ export default function FormularioPedido({ onCancelar }) {
             )}
             {cuponError && <p style={{ ...styles.error, marginTop: '0.3rem' }}>{cuponError}</p>}
           </div>
-          {error && <p style={styles.error}>{error}</p>}
+          {serverError && <p style={styles.error}>{serverError}</p>}
           <div style={styles.acciones}>
             <button style={styles.btnCancelar} type="button" onClick={onCancelar}>Volver</button>
             <button style={styles.btnEnviar} type="submit" disabled={loading}>

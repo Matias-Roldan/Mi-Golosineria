@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, Eye, EyeOff, Search, X, Menu } from 'lucide-react';
 import Sidebar from '../../components/admin/Sidebar';
-import { useSidebar } from '../../context/SidebarContext';
+import { useSidebar } from '../../stores/useSidebarStore';
 import {
   getProductosAdmin, crearProducto, editarProducto,
   eliminarProducto, toggleVisibilidad, subirImagen
@@ -172,8 +173,7 @@ function ModalProducto({ editId, form, setForm, categorias, onCerrar, onGuardar 
 
 export default function Productos() {
   const { toggle, isMobile } = useSidebar();
-  const [productos, setProductos] = useState([]);
-  const [categorias, setCategorias] = useState([]);
+  const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -181,25 +181,42 @@ export default function Productos() {
   const [filtroCat, setFiltroCat] = useState('');
   const [pagina, setPagina] = useState(1);
 
-  const cargar = () => getProductosAdmin().then(({ data }) => setProductos(data));
+  const { data: productos = [] } = useQuery({
+    queryKey: ['productos-admin'],
+    queryFn: () => getProductosAdmin().then(({ data }) => data),
+  });
 
-  useEffect(() => {
-    cargar();
-    getCategorias().then(({ data }) => setCategorias(data));
-  }, []);
+  const { data: categorias = [] } = useQuery({
+    queryKey: ['categorias-admin'],
+    queryFn: () => getCategorias().then(({ data }) => data),
+  });
+
+  const invalidarProductos = () =>
+    queryClient.invalidateQueries({ queryKey: ['productos-admin'] });
+
+  const mutGuardar = useMutation({
+    mutationFn: ({ editId, form }) =>
+      editId ? editarProducto(editId, form) : crearProducto(form),
+    onSuccess: invalidarProductos,
+  });
+
+  const mutEliminar = useMutation({
+    mutationFn: (id) => eliminarProducto(id),
+    onSuccess: invalidarProductos,
+  });
+
+  const mutToggle = useMutation({
+    mutationFn: (id) => toggleVisibilidad(id),
+    onSuccess: invalidarProductos,
+  });
 
   useEffect(() => { setPagina(1); }, [busqueda, filtroCat]);
 
   const handleGuardar = async () => {
-    if (editId) {
-      await editarProducto(editId, form);
-    } else {
-      await crearProducto(form);
-    }
+    await mutGuardar.mutateAsync({ editId, form });
     setForm(emptyForm);
     setEditId(null);
     setShowForm(false);
-    cargar();
   };
 
   const handleEditar = (p) => {
@@ -218,14 +235,12 @@ export default function Productos() {
 
   const handleEliminar = async (id) => {
     if (confirm('¿Eliminar este producto?')) {
-      await eliminarProducto(id);
-      cargar();
+      await mutEliminar.mutateAsync(id);
     }
   };
 
   const handleToggle = async (id) => {
-    await toggleVisibilidad(id);
-    cargar();
+    await mutToggle.mutateAsync(id);
   };
 
   const productosFiltrados = productos.filter(p => {

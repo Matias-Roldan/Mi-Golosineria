@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
 import Sidebar from '../../components/admin/Sidebar';
 import StatsCard from '../../components/admin/StatsCard';
-import { useSidebar } from '../../context/SidebarContext';
+import { useSidebar } from '../../stores/useSidebarStore';
 import {
   getKpis, getVentasDiarias, getTopProductos, getHeatmap,
   getAnalisisPareto, getAnalisisRFM, getSaludStock, getCrossSelling,
@@ -62,33 +62,33 @@ function BarTooltip({ active, payload, label }) {
 // ════════════════════════════════════════════════════════════════════════
 export default function Dashboard() {
   const { toggle, isMobile } = useSidebar();
-  const [kpis, setKpis]               = useState(null);
-  const [ventas, setVentas]           = useState([]);
-  const [topProductos, setTopProductos] = useState([]);
-  const [heatmap, setHeatmap]         = useState([]);
-  const [pareto, setPareto]           = useState([]);
-  const [rfm, setRfm]                 = useState([]);
-  const [stock, setStock]             = useState([]);
-  const [crossSelling, setCrossSelling] = useState([]);
-  const [loading, setLoading]         = useState(true);
 
-  useEffect(() => {
-    Promise.all([
-      getKpis(), getVentasDiarias(), getTopProductos(),
-      getHeatmap(), getAnalisisPareto(), getAnalisisRFM(), getSaludStock(), getCrossSelling(),
-    ])
-      .then(([kpisRes, ventasRes, topRes, heatRes, paretoRes, rfmRes, stockRes, crossRes]) => {
-        setKpis(kpisRes.data);
-        setVentas(ventasRes.data);
-        setTopProductos(topRes.data);
-        setHeatmap(heatRes.data ?? []);
-        setPareto(paretoRes.data ?? []);
-        setRfm(rfmRes.data ?? []);
-        setStock(stockRes.data ?? []);
-        setCrossSelling(crossRes.data ?? []);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: () =>
+      Promise.all([
+        getKpis(), getVentasDiarias(), getTopProductos(),
+        getHeatmap(), getAnalisisPareto(), getAnalisisRFM(), getSaludStock(), getCrossSelling(),
+      ]).then(([kpisRes, ventasRes, topRes, heatRes, paretoRes, rfmRes, stockRes, crossRes]) => ({
+        kpis:        kpisRes.data,
+        ventas:      ventasRes.data,
+        topProductos: topRes.data,
+        heatmap:     heatRes.data ?? [],
+        pareto:      paretoRes.data ?? [],
+        rfm:         rfmRes.data ?? [],
+        stock:       stockRes.data ?? [],
+        crossSelling: crossRes.data ?? [],
+      })),
+  });
+
+  const kpis         = data?.kpis         ?? null;
+  const ventas       = data?.ventas       ?? [];
+  const topProductos = data?.topProductos ?? [];
+  const heatmap      = data?.heatmap      ?? [];
+  const pareto       = data?.pareto       ?? [];
+  const rfm          = data?.rfm          ?? [];
+  const stock        = data?.stock        ?? [];
+  const crossSelling = data?.crossSelling ?? [];
 
   const formatPeso = (n) => {
     const num = parseFloat(n);

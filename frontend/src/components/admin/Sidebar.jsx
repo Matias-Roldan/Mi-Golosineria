@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { useSidebar } from '../../context/SidebarContext';
+import { useSidebar } from '../../stores/useSidebarStore';
 
 const links = [
   { to: '/admin',           icon: '▣',  label: 'Dashboard',  end: true },
