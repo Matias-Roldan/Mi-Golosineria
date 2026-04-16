@@ -49,7 +49,7 @@ const skeletonS = {
 };
 
 // ─── Ticker ───────────────────────────────────────────────────────────
-const TICKER_ITEMS = ['🍫 Chocolates importados', '🍬 Caramelos sin TACC', '🚀 Envíos en el día', '🎁 Ideal para eventos', '💜 Más de 50 sabores', '🍪 Galletas y snacks'];
+const TICKER_ITEMS = ['🍫 Chocolates importadiños', '🍬 Caramelos sin TACC', '🚀 Envíos en el día', '🎁 Ideal para eventos', '💜 Más de 50 sabores', '🍪 Galletas y snacks'];
 const Ticker = () => {
   const text = TICKER_ITEMS.join('   ·   ') + '   ·   ';
   return (
