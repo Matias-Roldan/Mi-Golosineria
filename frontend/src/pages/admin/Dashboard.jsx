@@ -99,7 +99,7 @@ export default function Dashboard() {
   };
 
   const maxUnidades = Math.max(...topProductos.map((p) => parseFloat(p.unidades) || 0), 1);
-  const maxStock    = Math.max(...stock.map((s) => parseFloat(s.stock_actual) || 0), 1);
+  const maxStock    = Math.max(...stock.map((s) => parseFloat(s.stock) || 0), 1);
 
   // Greeting
   const hora = new Date().getHours();
@@ -281,15 +281,22 @@ export default function Dashboard() {
                 </div>
                 <div style={D.list}>
                   {stock.map((p, i) => {
-                    const dias = parseFloat(p.dias_de_invetario_restante) || 0;
-                    const sc = dias < 7 ? '#ef4444' : dias < 14 ? '#f59e0b' : '#10b981';
-                    const sl = dias < 7 ? 'crítico' : dias < 14 ? 'bajo' : 'ok';
-                    const stockActual = parseFloat(p.stock_actual) || 0;
+                    const estado = (p.estado_stock ?? '').toLowerCase();
+                    const sc = estado === 'crítico' || estado === 'critico'
+                      ? '#ef4444'
+                      : estado === 'bajo'
+                      ? '#f59e0b'
+                      : '#10b981';
+                    const stockActual = parseFloat(p.stock) || 0;
                     const barPct = Math.min((stockActual / maxStock) * 100, 100);
+                    const margen = parseFloat(p.precio) - parseFloat(p.precio_costo);
+                    const margenPct = parseFloat(p.precio_costo) > 0
+                      ? ((margen / parseFloat(p.precio_costo)) * 100).toFixed(0)
+                      : null;
                     return (
                       <div key={i} style={D.row}>
                         <div style={{ ...D.badge, background: `${sc}18`, color: sc, fontSize: '0.62rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                          {sl}
+                          {p.estado_stock ?? '—'}
                         </div>
                         <div style={D.meta}>
                           <div style={D.name}>{p.nombre}</div>
@@ -297,13 +304,16 @@ export default function Dashboard() {
                             <div style={{ ...D.fill, background: `linear-gradient(90deg, ${sc}70, ${sc})`, width: `${barPct}%` }} />
                           </div>
                           <div style={{ fontSize: '0.67rem', color: '#8b8b9e', marginTop: '0.25rem' }}>
-                            Venta diaria: <strong style={{ color: '#a855f7' }}>{parseFloat(p.venta_diaria_promedio).toFixed(1)} ud.</strong>
+                            {p.categoria && <span style={{ marginRight: '0.6rem' }}>{p.categoria}</span>}
+                            {margenPct !== null && (
+                              <>Margen: <strong style={{ color: '#a855f7' }}>{margenPct}%</strong></>
+                            )}
                           </div>
                         </div>
                         <div style={D.stats}>
                           <span style={{ fontSize: '1.25rem', fontWeight: '900', color: sc, lineHeight: 1 }}>{stockActual}</span>
                           <span style={{ fontSize: '0.62rem', color: sc, opacity: 0.8 }}>ud. en stock</span>
-                          <span style={{ fontSize: '0.7rem', fontWeight: '700', color: sc }}>{dias.toFixed(0)} días</span>
+                          <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#c4c4d4' }}>{formatPeso(p.precio)}</span>
                         </div>
                       </div>
                     );
@@ -323,9 +333,9 @@ export default function Dashboard() {
                 </div>
                 <div style={D.list}>
                   {pareto.map((p, i) => {
-                    const pctAcum   = parseFloat(p.porcentaje_acumulado) || 0;
-                    const pctContrib = parseFloat(p.porcentaje_contribucion) || 0;
-                    const cat = p.categoria_pareto ?? 'C';
+                    const pctAcum    = parseFloat(p.pct_acumulado) || 0;
+                    const pctContrib = parseFloat(p.pct_ingresos) || 0;
+                    const cat = pctAcum <= 80 ? 'A' : pctAcum <= 95 ? 'B' : 'C';
                     const cc  = cat === 'A' ? '#a855f7' : cat === 'B' ? '#f59e0b' : '#6b7280';
                     const barGrad = cat === 'A'
                       ? 'linear-gradient(90deg, #a855f7, #e879f9)'
@@ -345,7 +355,7 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <div style={D.stats}>
-                          <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#fff', whiteSpace: 'nowrap' }}>{formatPeso(p.ingresos_producto)}</span>
+                          <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#fff', whiteSpace: 'nowrap' }}>{formatPeso(p.ingresos)}</span>
                         </div>
                       </div>
                     );
@@ -382,15 +392,15 @@ export default function Dashboard() {
                     </thead>
                     <tbody>
                       {rfm.map((c, i) => {
-                        const seg = c.segmento_cliente ?? '';
+                        const seg = c.segmento ?? '';
                         const sc  = seg === 'VIP' ? '#a855f7' : seg === 'Leal' ? '#10b981' : seg === 'En riesgo' ? '#ef4444' : '#f59e0b';
                         return (
                           <tr key={i} style={{ borderBottom: '1px solid #1a1a24' }}>
                             <td style={{ padding: '0.6rem 0.75rem', fontWeight: '700', color: '#fff' }}>{c.nombre ?? '—'}</td>
                             <td style={{ padding: '0.6rem 0.75rem', color: '#8b8b9e' }}>{c.telefono ?? '—'}</td>
                             <td style={{ padding: '0.6rem 0.75rem', color: '#8b8b9e', textAlign: 'center' }}>{c.recencia_dias ?? '—'}</td>
-                            <td style={{ padding: '0.6rem 0.75rem', color: '#8b8b9e', textAlign: 'center' }}>{c.frecuencia_pedidos ?? '—'}</td>
-                            <td style={{ padding: '0.6rem 0.75rem', fontWeight: '600', color: '#fff' }}>{formatPeso(c.valor_monetario)}</td>
+                            <td style={{ padding: '0.6rem 0.75rem', color: '#8b8b9e', textAlign: 'center' }}>{c.frecuencia ?? '—'}</td>
+                            <td style={{ padding: '0.6rem 0.75rem', fontWeight: '600', color: '#fff' }}>{formatPeso(c.monto_total)}</td>
                             <td style={{ padding: '0.6rem 0.75rem' }}>
                               <span style={{ background: `${sc}18`, color: sc, fontWeight: '800', fontSize: '0.62rem', textTransform: 'uppercase', borderRadius: '6px', padding: '3px 8px' }}>
                                 {seg || '—'}

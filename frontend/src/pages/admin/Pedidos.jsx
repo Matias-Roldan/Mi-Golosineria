@@ -482,7 +482,7 @@ export default function Pedidos() {
                 <tbody>
                   {detalle?.map((item, i) => (
                     <tr key={i} style={styles.tr}>
-                      <td style={styles.td}>{item.producto_nombre}</td>
+                      <td style={styles.td}>{item.producto}</td>
                       <td style={{ ...styles.td, color: '#8b8b9e' }}>{item.cantidad}</td>
                       <td style={{ ...styles.td, color: '#a855f7', fontWeight: '700' }}>${item.subtotal}</td>
                     </tr>
