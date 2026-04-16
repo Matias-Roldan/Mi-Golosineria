@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProductosDisponibles } from '../../api/productosApi';
 import ProductoCard from '../../components/tienda/ProductoCard';
@@ -21,7 +21,7 @@ const useWindowSize = () => {
 const useStaggeredVisible = (count) => {
   const [visibles, setVisibles] = useState([]);
   useEffect(() => {
-    setVisibles([]);
+    setVisibles([]); // eslint-disable-line react-hooks/set-state-in-effect
     Array.from({ length: count }).forEach((_, i) => {
       setTimeout(() => setVisibles((prev) => [...prev, i]), i * 55);
     });
@@ -67,7 +67,7 @@ const PulseDot = ({ count }) => {
   const prev = useRef(count);
   useEffect(() => {
     if (count !== prev.current && count > 0) {
-      setBounce(true);
+      setBounce(true); // eslint-disable-line react-hooks/set-state-in-effect
       setTimeout(() => setBounce(false), 450);
       prev.current = count;
     }
@@ -90,15 +90,18 @@ const CAT_EMOJI = { Todas: '✦', Chocolates: '🍫', Caramelos: '🍬', Chicles
 const catEmoji = (c) => CAT_EMOJI[c] ?? '🏷';
 
 // ─── Hero decorativo ──────────────────────────────────────────────────
-const FloatingCandy = ({ emoji, style }) => (
-  <motion.span
-    style={{ position: 'absolute', fontSize: '2.5rem', lineHeight: 1, pointerEvents: 'none', userSelect: 'none', ...style }}
-    animate={{ y: [0, -14, 0], rotate: [0, 8, -8, 0] }}
-    transition={{ duration: 5 + Math.random() * 3, repeat: Infinity, ease: 'easeInOut' }}
-  >
-    {emoji}
-  </motion.span>
-);
+function FloatingCandy({ emoji, style }) {
+  const duration = useMemo(() => 5 + Math.random() * 3, []); // eslint-disable-line react-hooks/purity
+  return (
+    <motion.span
+      style={{ position: 'absolute', fontSize: '2.5rem', lineHeight: 1, pointerEvents: 'none', userSelect: 'none', ...style }}
+      animate={{ y: [0, -14, 0], rotate: [0, 8, -8, 0] }}
+      transition={{ duration, repeat: Infinity, ease: 'easeInOut' }}
+    >
+      {emoji}
+    </motion.span>
+  );
+}
 
 // ════════════════════════════════════════════════════════════════════
 export default function Tienda() {
@@ -459,7 +462,7 @@ const T = {
     pointerEvents: 'none',
   },
   heroContent: {
-    maxWidth: '1280px',
+    maxWidth: '680px',
     margin: '0 auto',
     width: '100%',
     position: 'relative',
@@ -467,7 +470,6 @@ const T = {
     display: 'flex',
     flexDirection: 'column',
     gap: '1.5rem',
-    maxWidth: '680px',
   },
   heroEyebrow: {
     display: 'inline-flex',

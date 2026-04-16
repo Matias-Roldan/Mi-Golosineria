@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useCart } from '../../hooks/useCart';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 // ─── Stock helpers ────────────────────────────────────────────────────
 const stockConfig = (n) => {
@@ -43,104 +45,108 @@ export default function ProductoCard({ producto }) {
   };
 
   return (
-    <motion.article
-      style={{ ...C.card, opacity: sinStock ? 0.62 : 1 }}
+    <motion.div
       whileHover={sinStock ? {} : { y: -10, scale: 1.02 }}
       transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+      style={{ opacity: sinStock ? 0.62 : 1 }}
     >
-      {/* ── Imagen ── */}
-      <div style={C.imgWrap}>
-        {producto.imagen_url && !imgError ? (
-          <motion.img
-            src={producto.imagen_url}
-            alt={producto.nombre}
-            style={C.img}
-            whileHover={sinStock ? {} : { scale: 1.08 }}
-            transition={{ duration: 0.45, ease: [0.33, 1, 0.68, 1] }}
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <div style={C.imgPlaceholder}>
-            <span style={{ fontSize: '3.8rem', filter: 'drop-shadow(0 6px 12px rgba(168,85,247,0.25))' }}>🍬</span>
-          </div>
-        )}
+      <Card style={C.card}>
+        {/* ── Imagen ── */}
+        <div style={C.imgWrap}>
+          {producto.imagen_url && !imgError ? (
+            <motion.img
+              src={producto.imagen_url}
+              alt={producto.nombre}
+              style={C.img}
+              whileHover={sinStock ? {} : { scale: 1.08 }}
+              transition={{ duration: 0.45, ease: [0.33, 1, 0.68, 1] }}
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div style={C.imgPlaceholder}>
+              <span style={{ fontSize: '3.8rem', filter: 'drop-shadow(0 6px 12px rgba(168,85,247,0.25))' }}>🍬</span>
+            </div>
+          )}
 
-        {/* Badge categoría */}
-        <span style={{ ...C.catBadge, background: badge.bg, color: badge.color }}>
-          {producto.categoria}
-        </span>
+          {/* Badge categoría */}
+          <Badge
+            style={{ ...C.catBadge, background: badge.bg, color: badge.color }}
+          >
+            {producto.categoria}
+          </Badge>
 
-        {/* Overlay sin stock */}
-        {sinStock && (
-          <div style={C.outOfStockOverlay}>
-            <span style={C.outOfStockLabel}>Agotado</span>
-          </div>
-        )}
-      </div>
-
-      {/* ── Cuerpo ── */}
-      <div style={C.body}>
-
-        {/* Nombre */}
-        <h3 style={C.nombre}>{producto.nombre}</h3>
-
-        {/* Descripción */}
-        {producto.descripcion && (
-          <p style={C.descripcion}>{producto.descripcion}</p>
-        )}
-
-        {/* Stock */}
-        <div style={{ ...C.stockPill, background: stock.bg, border: `1px solid ${stock.border}` }}>
-          <span style={{ ...C.stockDot, background: stock.dot, boxShadow: `0 0 6px ${stock.dot}55` }} />
-          <span style={{ ...C.stockLabel, color: stock.color }}>{stock.label}</span>
+          {/* Overlay sin stock */}
+          {sinStock && (
+            <div style={C.outOfStockOverlay}>
+              <span style={C.outOfStockLabel}>Agotado</span>
+            </div>
+          )}
         </div>
 
-        {/* Footer precio + botón */}
-        <div style={C.footer}>
-          <div style={C.precioWrap}>
-            <span style={C.precioLabel}>precio</span>
-            <span style={C.precio}>${Number(producto.precio).toLocaleString('es-AR')}</span>
+        {/* ── Cuerpo ── */}
+        <CardContent style={C.body}>
+
+          {/* Nombre */}
+          <h3 style={C.nombre}>{producto.nombre}</h3>
+
+          {/* Descripción */}
+          {producto.descripcion && (
+            <p style={C.descripcion}>{producto.descripcion}</p>
+          )}
+
+          {/* Stock */}
+          <div style={{ ...C.stockPill, background: stock.bg, border: `1px solid ${stock.border}` }}>
+            <span style={{ ...C.stockDot, background: stock.dot, boxShadow: `0 0 6px ${stock.dot}55` }} />
+            <span style={{ ...C.stockLabel, color: stock.color }}>{stock.label}</span>
           </div>
 
-          <motion.button
-            style={{
-              ...C.btn,
-              ...(sinStock ? C.btnDisabled : adding ? C.btnAdding : {}),
-            }}
-            onClick={handleAgregar}
-            disabled={sinStock}
-            animate={adding ? { scale: [1, 1.14, 0.95, 1.05, 1] } : { scale: 1 }}
-            whileHover={sinStock ? {} : { scale: 1.03, y: -2 }}
-            whileTap={sinStock ? {} : { scale: 0.96 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-          >
-            {adding ? (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                <span style={{ fontWeight: 900 }}>✓</span> ¡Listo!
-              </span>
-            ) : sinStock ? (
-              'Agotado'
-            ) : (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>＋</span> Agregar
-              </span>
-            )}
-          </motion.button>
-        </div>
+          {/* Footer precio + botón */}
+          <div style={C.footer}>
+            <div style={C.precioWrap}>
+              <span style={C.precioLabel}>precio</span>
+              <span style={C.precio}>${Number(producto.precio).toLocaleString('es-AR')}</span>
+            </div>
 
-        {/* In-cart badge */}
-        {cantCarrito > 0 && (
-          <motion.div
-            style={C.inCartBadge}
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-          >
-            🛒 {cantCarrito} en tu carrito
-          </motion.div>
-        )}
-      </div>
-    </motion.article>
+            <motion.button
+              style={{
+                ...C.btn,
+                ...(sinStock ? C.btnDisabled : adding ? C.btnAdding : {}),
+              }}
+              onClick={handleAgregar}
+              disabled={sinStock}
+              animate={adding ? { scale: [1, 1.14, 0.95, 1.05, 1] } : { scale: 1 }}
+              whileHover={sinStock ? {} : { scale: 1.03, y: -2 }}
+              whileTap={sinStock ? {} : { scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            >
+              {adding ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <span style={{ fontWeight: 900 }}>✓</span> ¡Listo!
+                </span>
+              ) : sinStock ? (
+                'Agotado'
+              ) : (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>＋</span> Agregar
+                </span>
+              )}
+            </motion.button>
+          </div>
+
+          {/* In-cart badge */}
+          {cantCarrito > 0 && (
+            <motion.div
+              style={C.inCartBadge}
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+            >
+              🛒 {cantCarrito} en tu carrito
+            </motion.div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
 
@@ -155,6 +161,7 @@ const C = {
     cursor: 'default',
     fontFamily: "'Nunito', system-ui, sans-serif",
     boxShadow: '0 2px 16px rgba(168,85,247,0.08), 0 0 0 1px #f3e8ff',
+    border: 'none',
   },
 
   // Imagen
@@ -183,6 +190,7 @@ const C = {
     letterSpacing: '0.1em',
     padding: '0.22rem 0.7rem',
     borderRadius: '50px',
+    border: 'none',
   },
   outOfStockOverlay: {
     position: 'absolute', inset: 0,

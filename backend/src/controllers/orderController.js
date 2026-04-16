@@ -2,7 +2,7 @@ const pool = require('../config/db');
 
 // Tienda pública: registrar pedido
 exports.registrarPedido = async (req, res) => {
-  const { nombre_cliente, telefono, notas, items } = req.body;
+  const { nombre_cliente, telefono, notas, items, cupon } = req.body;
 
   if (!nombre_cliente || typeof nombre_cliente !== 'string' || nombre_cliente.trim().length < 2 || nombre_cliente.trim().length > 100)
     return res.status(400).json({ error: 'Nombre inválido (2-100 caracteres)' });
@@ -21,8 +21,8 @@ exports.registrarPedido = async (req, res) => {
 
   try {
     const itemsJson = JSON.stringify(items);
-    const [rows] = await pool.query('CALL sp_tienda_registrar_pedido(?,?,?,?)',
-      [nombre_cliente.trim(), telefono.trim(), notas?.trim() || null, itemsJson]);
+    const [rows] = await pool.query('CALL sp_tienda_registrar_pedido(?,?,?,?,?)',
+      [nombre_cliente.trim(), telefono.trim(), notas?.trim() || null, itemsJson, cupon?.trim() || null]);
     const pedidoId = rows[0][0].pedido_generado;
     res.status(201).json({ mensaje: 'Pedido registrado', pedido_id: pedidoId });
   } catch (err) {

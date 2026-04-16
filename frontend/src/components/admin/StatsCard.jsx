@@ -1,45 +1,48 @@
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function StatsCard({ icon, label, value, color = '#a855f7', sparkData }) {
   const isLongText = typeof value === 'string' && value.length > 15;
   const gradId = `sg-${label.toLowerCase().replace(/\W/g, '')}`;
 
   return (
-    <div style={S.card}>
-      <div style={S.top}>
-        <div style={{ ...S.iconBadge, background: `${color}1a`, border: `1px solid ${color}30` }}>
-          <span style={S.icon}>{icon}</span>
+    <Card style={S.card}>
+      <CardContent style={{ padding: 0 }}>
+        <div style={S.top}>
+          <div style={{ ...S.iconBadge, background: `${color}1a`, border: `1px solid ${color}30` }}>
+            <span style={S.icon}>{icon}</span>
+          </div>
+          <div style={S.body}>
+            <p style={S.label}>{label}</p>
+            <p style={{ ...S.value, ...(isLongText ? S.valueSmall : {}) }}>{value ?? '—'}</p>
+          </div>
         </div>
-        <div style={S.body}>
-          <p style={S.label}>{label}</p>
-          <p style={{ ...S.value, ...(isLongText ? S.valueSmall : {}) }}>{value ?? '—'}</p>
-        </div>
-      </div>
 
-      {sparkData && sparkData.length > 1 && (
-        <div style={S.sparkWrap}>
-          <ResponsiveContainer width="100%" height={44}>
-            <AreaChart data={sparkData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor={color} stopOpacity={0.28} />
-                  <stop offset="95%" stopColor={color} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area
-                type="monotone"
-                dataKey="v"
-                stroke={color}
-                strokeWidth={1.8}
-                fill={`url(#${gradId})`}
-                dot={false}
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-    </div>
+        {sparkData && sparkData.length > 1 && (
+          <div style={S.sparkWrap}>
+            <ResponsiveContainer width="100%" height={44}>
+              <AreaChart data={sparkData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor={color} stopOpacity={0.28} />
+                    <stop offset="95%" stopColor={color} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <Area
+                  type="monotone"
+                  dataKey="v"
+                  stroke={color}
+                  strokeWidth={1.8}
+                  fill={`url(#${gradId})`}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

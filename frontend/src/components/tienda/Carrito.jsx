@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../../hooks/useCart';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // ─── Item individual ─────────────────────────────────────────────────
 function CartItem({ item, stockOriginal, onCambiar, onQuitar }) {
@@ -112,9 +115,15 @@ export default function Carrito({ isOpen, onClose, onConfirmar, productos }) {
                 </div>
               </div>
 
-              <button style={S.closeBtn} onClick={onClose} title="Cerrar">
+              <Button
+                variant="ghost"
+                size="icon"
+                style={S.closeBtn}
+                onClick={onClose}
+                title="Cerrar"
+              >
                 ✕
-              </button>
+              </Button>
             </div>
 
             {/* ── Contenido ── */}
@@ -123,7 +132,7 @@ export default function Carrito({ isOpen, onClose, onConfirmar, productos }) {
             ) : (
               <>
                 {/* Lista de items */}
-                <div style={S.items}>
+                <ScrollArea style={S.items}>
                   <AnimatePresence initial={false}>
                     {carrito.map((p) => {
                       const stockOriginal = productos?.find((prod) => prod.id === p.id)?.stock ?? p.stock ?? 99;
@@ -138,13 +147,13 @@ export default function Carrito({ isOpen, onClose, onConfirmar, productos }) {
                       );
                     })}
                   </AnimatePresence>
-                </div>
+                </ScrollArea>
 
                 {/* Totales */}
                 <div style={S.totalArea}>
                   <div style={S.shippingRow}>
                     <span style={S.shippingLabel}>🚀 Envío en el día</span>
-                    <span style={S.shippingFree}>Gratis</span>
+                    <Badge style={S.shippingFree}>Gratis</Badge>
                   </div>
                   <div style={S.totalRow}>
                     <span style={S.totalLabel}>Total</span>
@@ -154,16 +163,19 @@ export default function Carrito({ isOpen, onClose, onConfirmar, productos }) {
 
                 {/* CTA */}
                 <div style={S.ctaArea}>
-                  <motion.button
-                    style={S.btnConfirmar}
-                    onClick={() => { onClose(); onConfirmar(); }}
+                  <motion.div
                     whileHover={{ scale: 1.02, y: -2 }}
                     whileTap={{ scale: 0.97 }}
                     transition={{ type: 'spring', stiffness: 400, damping: 20 }}
                   >
-                    <span>Confirmar pedido</span>
-                    <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>→</span>
-                  </motion.button>
+                    <Button
+                      style={S.btnConfirmar}
+                      onClick={() => { onClose(); onConfirmar(); }}
+                    >
+                      <span>Confirmar pedido</span>
+                      <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>→</span>
+                    </Button>
+                  </motion.div>
                 </div>
               </>
             )}
@@ -252,8 +264,6 @@ const S = {
   items: {
     flex: 1,
     padding: '0 1.5rem',
-    overflowY: 'auto',
-    scrollbarWidth: 'none',
   },
   item: {
     display: 'flex',
@@ -409,6 +419,7 @@ const S = {
     fontFamily: "'Nunito', inherit",
     letterSpacing: '0.01em',
     boxShadow: '0 8px 28px rgba(168,85,247,0.42)',
+    height: 'auto',
   },
 
   // Vacío

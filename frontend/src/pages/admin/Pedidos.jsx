@@ -282,7 +282,7 @@ export default function Pedidos() {
     onError: (err) => alert(err.response?.data?.error || 'Error al cambiar estado'),
   });
 
-  useEffect(() => { setPagina(1); }, [busqueda, filtroEstado]);
+  useEffect(() => { setPagina(1); }, [busqueda, filtroEstado]); // eslint-disable-line react-hooks/set-state-in-effect
 
   const verDetalle = (pedido) => setPedidoSel(pedido);
 
@@ -290,7 +290,7 @@ export default function Pedidos() {
 
   const pedidosFiltrados = pedidos.filter(p => {
     const matchBusqueda = !busqueda ||
-      p.nombreCliente?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      p.cliente_nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
       String(p.id).includes(busqueda);
     const matchEstado = filtroEstado === 'todos' || p.estado === filtroEstado;
     return matchBusqueda && matchEstado;
@@ -370,9 +370,9 @@ export default function Pedidos() {
                         <span style={styles.pedidoId}>#{p.id}</span>
                       </td>
                       <td style={styles.td}>
-                        <span style={styles.clienteNombre}>{p.nombreCliente}</span>
+                        <span style={styles.clienteNombre}>{p.cliente_nombre}</span>
                       </td>
-                      <td style={{ ...styles.td, color: '#8b8b9e' }}>{p.telefono}</td>
+                      <td style={{ ...styles.td, color: '#8b8b9e' }}>{p.cliente_telefono}</td>
                       <td style={styles.td}>
                         <span style={styles.totalText}>${Number(p.total).toLocaleString('es-AR')}</span>
                       </td>
@@ -398,7 +398,7 @@ export default function Pedidos() {
                         </select>
                       </td>
                       <td style={{ ...styles.td, color: '#8b8b9e' }}>
-                        {new Date(p.createdAt).toLocaleDateString('es-AR')}
+                        {new Date(p.creado_en).toLocaleDateString('es-AR')}
                       </td>
                       <td style={styles.td}>
                         <div style={styles.acciones}>
@@ -456,8 +456,8 @@ export default function Pedidos() {
               <div style={styles.detalleHeader}>
                 <div>
                   <h3 style={styles.detalleTitulo}>Pedido #{pedidoSel.id}</h3>
-                  <p style={styles.detalleCliente}>{pedidoSel.nombreCliente}</p>
-                  <p style={{ color: '#8b8b9e', fontSize: '0.82rem' }}>{pedidoSel.telefono}</p>
+                  <p style={styles.detalleCliente}>{pedidoSel.cliente_nombre}</p>
+                  <p style={{ color: '#8b8b9e', fontSize: '0.82rem' }}>{pedidoSel.cliente_telefono}</p>
                 </div>
                 <div>
                   {(() => {

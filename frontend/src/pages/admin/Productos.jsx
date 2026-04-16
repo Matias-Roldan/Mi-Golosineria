@@ -210,7 +210,7 @@ export default function Productos() {
     onSuccess: invalidarProductos,
   });
 
-  useEffect(() => { setPagina(1); }, [busqueda, filtroCat]);
+  useEffect(() => { setPagina(1); }, [busqueda, filtroCat]); // eslint-disable-line react-hooks/set-state-in-effect
 
   const handleGuardar = async () => {
     await mutGuardar.mutateAsync({ editId, form });

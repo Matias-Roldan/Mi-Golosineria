@@ -1,17 +1,15 @@
-import { createContext, useState, useEffect } from 'react';
+import { createContext, useState } from 'react';
 import { login as loginApi } from '../api/authApi';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [admin, setAdmin] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const storedAdmin = localStorage.getItem('admin');
-    if (storedAdmin) setAdmin(JSON.parse(storedAdmin));
-    setLoading(false);
-  }, []);
+  const [admin, setAdmin] = useState(() => {
+    const stored = localStorage.getItem('admin');
+    return stored ? JSON.parse(stored) : null;
+  });
+  const loading = false;
 
   const login = async (email, password) => {
     const { data } = await loginApi(email, password);
