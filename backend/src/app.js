@@ -52,6 +52,9 @@ app.get('/', (req, res) => res.json({ status: 'OK' }));
 // ── Manejo global de errores (no expone stack traces) ─────────────────
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {
+  if (err.status) {
+    return res.status(err.status).json({ error: err.message });
+  }
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Error interno del servidor' });
 });
