@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, Eye, EyeOff, Search, X, Menu } from 'lucide-react';
 import Sidebar from '../../components/admin/Sidebar';
@@ -181,15 +181,27 @@ export default function Productos() {
   const [filtroCat, setFiltroCat] = useState('');
   const [pagina, setPagina] = useState(1);
 
-  const { data: productos = [] } = useQuery({
-    queryKey: ['productos-admin'],
-    queryFn: () => getProductosAdmin().then(({ data }) => data),
+  const [queryProductos, queryCategorias] = useQueries({
+    queries: [
+      {
+        queryKey: ['productos-admin', pagina, busqueda, filtroCat],
+        queryFn: () => getProductosAdmin({ page: pagina, limit: ITEMS_POR_PAGINA, search: busqueda, categoria: filtroCat })
+          .then(({ data }) => data),
+      },
+      {
+        queryKey: ['categorias-admin'],
+        queryFn: () => getCategorias().then(({ data }) => data),
+      },
+    ],
   });
 
-  const { data: categorias = [] } = useQuery({
-    queryKey: ['categorias-admin'],
-    queryFn: () => getCategorias().then(({ data }) => data),
-  });
+  const isLoading = queryProductos.isLoading || queryCategorias.isLoading;
+  const error = queryProductos.error || queryCategorias.error;
+
+  const response = queryProductos.data ?? { data: [], total: 0, page: 1, limit: ITEMS_POR_PAGINA };
+  const productos = response.data;
+  const totalPaginas = Math.ceil(response.total / ITEMS_POR_PAGINA);
+  const categorias = queryCategorias.data ?? [];
 
   const invalidarProductos = () =>
     queryClient.invalidateQueries({ queryKey: ['productos-admin'] });
@@ -243,17 +255,6 @@ export default function Productos() {
     await mutToggle.mutateAsync(id);
   };
 
-  const productosFiltrados = productos.filter(p => {
-    const matchSearch = !busqueda || p.nombre.toLowerCase().includes(busqueda.toLowerCase());
-    const matchCat = !filtroCat || p.categoria === filtroCat;
-    return matchSearch && matchCat;
-  });
-
-  const totalPaginas = Math.ceil(productosFiltrados.length / ITEMS_POR_PAGINA);
-  const productosPaginados = productosFiltrados.slice(
-    (pagina - 1) * ITEMS_POR_PAGINA,
-    pagina * ITEMS_POR_PAGINA
-  );
 
   return (
     <div style={styles.layout}>
@@ -294,11 +295,20 @@ export default function Productos() {
           </select>
         </motion.div>
 
+        {isLoading && (
+          <div style={{ textAlign: 'center', padding: '4rem', color: '#8b8b9e' }}>Cargando productos...</div>
+        )}
+        {error && (
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#f87171' }}>
+            Error al cargar datos: {error.message}
+          </div>
+        )}
+
         <motion.div
           variants={fadeUp} initial="hidden" animate="visible" custom={2}
           style={styles.grid}
         >
-          {productosPaginados.map((p, idx) => (
+          {productos.map((p, idx) => (
             <motion.div
               key={p.id}
               variants={fadeUp}
@@ -354,7 +364,7 @@ export default function Productos() {
             </motion.div>
           ))}
 
-          {productosFiltrados.length === 0 && (
+          {productos.length === 0 && (
             <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '4rem', color: '#8b8b9e' }}>
               No se encontraron productos
             </div>

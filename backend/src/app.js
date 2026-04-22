@@ -1,13 +1,22 @@
 require('dotenv').config();
+const { validateEnv } = require('./config/validateEnv');
+validateEnv();
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
+const logger = require('./config/logger');
+const requestLogger = require('./middleware/requestLogger');
+
 const app = express();
 
 // ── Seguridad: headers HTTP ───────────────────────────────────────────
 app.use(helmet());
+
+// ── Logging de requests ───────────────────────────────────────────────
+app.use(requestLogger);
 
 // ── CORS: solo el origen configurado en .env ─────────────────────────
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
@@ -55,9 +64,9 @@ app.use((err, _req, res, _next) => {
   if (err.status) {
     return res.status(err.status).json({ error: err.message });
   }
-  console.error('Unhandled error:', err);
+  logger.error('Unhandled error', { message: err.message, stack: err.stack });
   res.status(500).json({ error: 'Error interno del servidor' });
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Servidor en http://localhost:${PORT}`));
+app.listen(PORT, () => logger.info(`Servidor en http://localhost:${PORT}`));

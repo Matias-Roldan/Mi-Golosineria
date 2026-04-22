@@ -2,7 +2,8 @@ const clienteService = require('../services/clienteService');
 
 exports.getClientes = async (req, res, next) => {
   try {
-    res.json(await clienteService.getAll());
+    const { page, limit, search } = req.query;
+    res.json(await clienteService.getAll({ page, limit, search }));
   } catch (err) { next(err); }
 };
 

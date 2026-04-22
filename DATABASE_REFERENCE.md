@@ -261,6 +261,16 @@ Actualiza un producto. Busca la categoría por nombre.
 
 ---
 
+### `sp_tienda_filtrar_categoria(p_categoria_id INT UNSIGNED)`
+Retorna productos disponibles filtrados por categoría.
+- Parámetros: `p_categoria_id` — ID de la categoría (INT UNSIGNED, requerido).
+- Filtro: `visible = 1 AND eliminado = 0 AND stock > 0`.
+- Retorna: `id`, `nombre`, `descripcion`, `precio`, `stock`, `imagen_url`, `categoria` (nombre).
+- Ordenado por `nombre ASC`.
+- Llamado desde: `productoRepository.findPorCategoria`.
+
+---
+
 ### `sp_tienda_registrar_pedido(p_nombre, p_telefono, p_notas, p_items_json, p_codigo_desc)`
 Registra un pedido completo desde la tienda. Proceso:
 1. Obtiene o crea el cliente por teléfono.

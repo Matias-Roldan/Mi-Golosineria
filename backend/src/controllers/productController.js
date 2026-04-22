@@ -14,7 +14,8 @@ exports.filtrarPorCategoria = async (req, res, next) => {
 
 exports.getProductosAdmin = async (req, res, next) => {
   try {
-    res.json(await productoService.getAdmin());
+    const { page, limit, search, categoria } = req.query;
+    res.json(await productoService.getAdmin({ page, limit, search, categoria }));
   } catch (err) { next(err); }
 };
 

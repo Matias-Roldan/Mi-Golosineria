@@ -1,7 +1,7 @@
 const adminService = require('../services/adminService');
 
 const wrap = (fn) => async (req, res, next) => {
-  try { res.json(await fn()); } catch (err) { next(err); }
+  try { res.json(await fn(req)); } catch (err) { next(err); }
 };
 
 exports.getKpis = wrap(adminService.getKpis);
@@ -15,14 +15,5 @@ exports.getSaludStock = wrap(adminService.getSaludStock);
 exports.getCrossSelling = wrap(adminService.getCrossSelling);
 exports.getEstacionalidadCategorias = wrap(adminService.getEstacionalidad);
 
-exports.getElasticidadPrecio = async (req, res, next) => {
-  try {
-    res.json(await adminService.getElasticidadPrecio(req.params.producto_id));
-  } catch (err) { next(err); }
-};
-
-exports.getPuntoEquilibrio = async (req, res, next) => {
-  try {
-    res.json(await adminService.getPuntoEquilibrio(req.query.costos_fijos));
-  } catch (err) { next(err); }
-};
+exports.getElasticidadPrecio = wrap((req) => adminService.getElasticidadPrecio(req.params.producto_id));
+exports.getPuntoEquilibrio = wrap((req) => adminService.getPuntoEquilibrio(req.query.costos_fijos));

@@ -221,27 +221,18 @@ export default function Clientes() {
   const [busqueda, setBusqueda] = useState('');
   const [pagina, setPagina] = useState(1);
 
-  const { data: clientes = [] } = useQuery({
-    queryKey: ['clientes'],
-    queryFn: () => getClientes().then(r => r.data),
+  const { data: response = { data: [], total: 0, page: 1, limit: ITEMS_POR_PAGINA } } = useQuery({
+    queryKey: ['clientes', pagina, busqueda],
+    queryFn: () => getClientes({ page: pagina, limit: ITEMS_POR_PAGINA, search: busqueda }).then(({ data }) => data),
   });
 
-  // Reset página al cambiar búsqueda
+  const clientesPaginados = response.data;
+  const totalPaginas = Math.ceil(response.total / ITEMS_POR_PAGINA);
+
   const handleBusqueda = (valor) => {
     setBusqueda(valor);
     setPagina(1);
   };
-
-  const clientesFiltrados = clientes.filter(c =>
-    c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-    c.telefono.includes(busqueda)
-  );
-
-  const totalPaginas = Math.ceil(clientesFiltrados.length / ITEMS_POR_PAGINA);
-  const clientesPaginados = clientesFiltrados.slice(
-    (pagina - 1) * ITEMS_POR_PAGINA,
-    pagina * ITEMS_POR_PAGINA
-  );
 
   return (
     <div style={styles.layout}>
@@ -273,7 +264,7 @@ export default function Clientes() {
             />
           </div>
           <span style={styles.totalLabel}>
-            {clientesFiltrados.length} cliente{clientesFiltrados.length !== 1 ? 's' : ''}
+            {response.total} cliente{response.total !== 1 ? 's' : ''}
           </span>
         </motion.div>
 
@@ -297,7 +288,7 @@ export default function Clientes() {
                   onEditar={(cliente) => setModalCliente(cliente)}
                 />
               ))}
-              {clientesFiltrados.length === 0 && (
+              {clientesPaginados.length === 0 && (
                 <tr>
                   <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: '#8b8b9e' }}>
                     No se encontraron clientes

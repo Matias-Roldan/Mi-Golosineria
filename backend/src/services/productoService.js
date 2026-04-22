@@ -9,7 +9,15 @@ const filtrarPorCategoria = (categoriaId) => {
   return productoRepo.findPorCategoria(id);
 };
 
-const getAdmin = () => productoRepo.findAdmin();
+const getAdmin = async ({ page, limit, search, categoria } = {}) => {
+  const parsedPage = Math.max(1, parseInt(page) || 1);
+  const parsedLimit = Math.min(100, Math.max(1, parseInt(limit) || 20));
+  const [data, total] = await Promise.all([
+    productoRepo.findAdmin({ page: parsedPage, limit: parsedLimit, search, categoria }),
+    productoRepo.countAdmin({ search, categoria }),
+  ]);
+  return { data, total, page: parsedPage, limit: parsedLimit };
+};
 
 const _validarCamposProducto = ({ nombre, precio, precio_costo, categoria, stock }) => {
   if (!nombre || typeof nombre !== 'string' || nombre.trim().length < 2 || nombre.trim().length > 150)

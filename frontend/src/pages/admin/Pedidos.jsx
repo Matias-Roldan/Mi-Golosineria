@@ -37,13 +37,13 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
   const [tab, setTab] = useState('manual');
 
   const { data: productos = [] } = useQuery({
-    queryKey: ['productosAdmin'],
-    queryFn: () => getProductosAdmin().then(({ data }) => data.filter(p => p.stock > 0)),
+    queryKey: ['productosAdmin-modal'],
+    queryFn: () => getProductosAdmin({ limit: 200 }).then(({ data }) => data.data.filter(p => p.stock > 0)),
   });
 
   const { data: clientes = [] } = useQuery({
-    queryKey: ['clientes'],
-    queryFn: () => getClientes().then(({ data }) => data),
+    queryKey: ['clientes-modal'],
+    queryFn: () => getClientes({ limit: 200 }).then(({ data }) => data.data),
   });
 
   const registrarMutation = useMutation({
@@ -260,10 +260,14 @@ export default function Pedidos() {
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [pagina, setPagina] = useState(1);
 
-  const { data: pedidos = [] } = useQuery({
-    queryKey: ['pedidosAdmin'],
-    queryFn: () => getPedidosAdmin().then(({ data }) => data),
+  const { data: response = { data: [], total: 0, page: 1, limit: ITEMS_POR_PAGINA } } = useQuery({
+    queryKey: ['pedidosAdmin', pagina, busqueda, filtroEstado],
+    queryFn: () => getPedidosAdmin({ page: pagina, limit: ITEMS_POR_PAGINA, search: busqueda, estado: filtroEstado })
+      .then(({ data }) => data),
   });
+
+  const pedidosPaginados = response.data;
+  const totalPaginas = Math.ceil(response.total / ITEMS_POR_PAGINA);
 
   const { data: detalle } = useQuery({
     queryKey: ['detallePedido', pedidoSel?.id],
@@ -287,20 +291,6 @@ export default function Pedidos() {
   const verDetalle = (pedido) => setPedidoSel(pedido);
 
   const handleEstado = (id, estado) => cambiarEstadoMutation.mutate({ id, estado });
-
-  const pedidosFiltrados = pedidos.filter(p => {
-    const matchBusqueda = !busqueda ||
-      p.cliente_nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-      String(p.id).includes(busqueda);
-    const matchEstado = filtroEstado === 'todos' || p.estado === filtroEstado;
-    return matchBusqueda && matchEstado;
-  });
-
-  const totalPaginas = Math.ceil(pedidosFiltrados.length / ITEMS_POR_PAGINA);
-  const pedidosPaginados = pedidosFiltrados.slice(
-    (pagina - 1) * ITEMS_POR_PAGINA,
-    pagina * ITEMS_POR_PAGINA
-  );
 
   return (
     <div style={styles.layout}>
@@ -415,7 +405,7 @@ export default function Pedidos() {
                     </tr>
                   );
                 })}
-                {pedidosFiltrados.length === 0 && (
+                {pedidosPaginados.length === 0 && (
                   <tr>
                     <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: '#8b8b9e' }}>
                       No se encontraron pedidos

@@ -9,7 +9,8 @@ exports.registrarPedido = async (req, res, next) => {
 
 exports.getPedidosAdmin = async (req, res, next) => {
   try {
-    res.json(await pedidoService.getAdmin());
+    const { page, limit, search, estado } = req.query;
+    res.json(await pedidoService.getAdmin({ page, limit, search, estado }));
   } catch (err) { next(err); }
 };
 

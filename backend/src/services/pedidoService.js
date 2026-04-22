@@ -50,7 +50,15 @@ const validarCupon = async (codigo, total) => {
   return resultado;
 };
 
-const getAdmin = () => pedidoRepo.findAdmin();
+const getAdmin = async ({ page, limit, search, estado } = {}) => {
+  const parsedPage = Math.max(1, parseInt(page) || 1);
+  const parsedLimit = Math.min(100, Math.max(1, parseInt(limit) || 20));
+  const [data, total] = await Promise.all([
+    pedidoRepo.findAdmin({ page: parsedPage, limit: parsedLimit, search, estado }),
+    pedidoRepo.countAdmin({ search, estado }),
+  ]);
+  return { data, total, page: parsedPage, limit: parsedLimit };
+};
 
 const getDetalle = (id) => pedidoRepo.findDetalle(id);
 

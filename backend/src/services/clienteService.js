@@ -10,7 +10,15 @@ const _validarDatosCliente = (nombre, telefono, email) => {
     throw new AppError('Email inválido', 400);
 };
 
-const getAll = () => clienteRepo.findAll();
+const getAll = async ({ page, limit, search } = {}) => {
+  const parsedPage = Math.max(1, parseInt(page) || 1);
+  const parsedLimit = Math.min(100, Math.max(1, parseInt(limit) || 20));
+  const [data, total] = await Promise.all([
+    clienteRepo.findAll({ page: parsedPage, limit: parsedLimit, search }),
+    clienteRepo.count({ search }),
+  ]);
+  return { data, total, page: parsedPage, limit: parsedLimit };
+};
 
 const getPerfil = (id) => clienteRepo.findPerfil(id);
 
