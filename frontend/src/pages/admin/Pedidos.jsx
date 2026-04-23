@@ -39,11 +39,13 @@ function ModalNuevoPedido({ onCerrar, onCreado }) {
   const { data: productos = [] } = useQuery({
     queryKey: ['productosAdmin-modal'],
     queryFn: () => getProductosAdmin({ limit: 200 }).then(({ data }) => data.data.filter(p => p.stock > 0)),
+    staleTime: 2 * 60 * 1000,
   });
 
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes-modal'],
     queryFn: () => getClientes({ limit: 200 }).then(({ data }) => data.data),
+    staleTime: 2 * 60 * 1000,
   });
 
   const registrarMutation = useMutation({
@@ -264,6 +266,7 @@ export default function Pedidos() {
     queryKey: ['pedidosAdmin', pagina, busqueda, filtroEstado],
     queryFn: () => getPedidosAdmin({ page: pagina, limit: ITEMS_POR_PAGINA, search: busqueda, estado: filtroEstado })
       .then(({ data }) => data),
+    staleTime: 2 * 60 * 1000,
   });
 
   const pedidosPaginados = response.data;
@@ -273,6 +276,7 @@ export default function Pedidos() {
     queryKey: ['detallePedido', pedidoSel?.id],
     queryFn: () => getDetallePedido(pedidoSel.id).then(({ data }) => data),
     enabled: !!pedidoSel,
+    staleTime: 2 * 60 * 1000,
   });
 
   const refetchPedidos = () => queryClient.invalidateQueries({ queryKey: ['pedidosAdmin'] });

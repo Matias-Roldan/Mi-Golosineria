@@ -1,48 +1,49 @@
 const productoService = require('../services/productoService');
+const { success, created } = require('../utils/response');
 
 exports.getProductosDisponibles = async (req, res, next) => {
   try {
-    res.json(await productoService.getDisponibles());
+    success(res, await productoService.getDisponibles());
   } catch (err) { next(err); }
 };
 
 exports.filtrarPorCategoria = async (req, res, next) => {
   try {
-    res.json(await productoService.filtrarPorCategoria(req.params.id));
+    success(res, await productoService.filtrarPorCategoria(req.params.id));
   } catch (err) { next(err); }
 };
 
 exports.getProductosAdmin = async (req, res, next) => {
   try {
     const { page, limit, search, categoria } = req.query;
-    res.json(await productoService.getAdmin({ page, limit, search, categoria }));
+    success(res, await productoService.getAdmin({ page, limit, search, categoria }));
   } catch (err) { next(err); }
 };
 
 exports.crearProducto = async (req, res, next) => {
   try {
     await productoService.crear(req.body);
-    res.status(201).json({ mensaje: 'Producto creado exitosamente' });
+    created(res, { mensaje: 'Producto creado exitosamente' });
   } catch (err) { next(err); }
 };
 
 exports.editarProducto = async (req, res, next) => {
   try {
     await productoService.editar(req.params.id, req.body);
-    res.json({ mensaje: 'Producto actualizado' });
+    success(res, { mensaje: 'Producto actualizado' });
   } catch (err) { next(err); }
 };
 
 exports.eliminarProducto = async (req, res, next) => {
   try {
     await productoService.eliminar(req.params.id);
-    res.json({ mensaje: 'Producto eliminado (soft delete)' });
+    success(res, { mensaje: 'Producto eliminado (soft delete)' });
   } catch (err) { next(err); }
 };
 
 exports.toggleVisibilidad = async (req, res, next) => {
   try {
     await productoService.toggleVisibilidad(req.params.id);
-    res.json({ mensaje: 'Visibilidad actualizada' });
+    success(res, { mensaje: 'Visibilidad actualizada' });
   } catch (err) { next(err); }
 };

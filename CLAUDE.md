@@ -20,9 +20,8 @@ npm run lint      # ESLint check
 ```bash
 npm run dev       # Nodemon with hot reload
 npm start         # node src/app.js (production)
+npm test          # Jest unit tests (backend/__tests__ + src/__tests__)
 ```
-
-No test runner is configured (no Jest/Vitest).
 
 ## Environment Setup
 
@@ -56,10 +55,18 @@ No test runner is configured (no Jest/Vitest).
 
 ### Backend
 - **Express 4** on port 3001
-- **Middleware stack (order matters):** `helmet → cors → express.json → rate-limit → routes → error handler`
-- **Security:** JWT via `src/middleware/auth.js`, admin role check via `src/middleware/isAdmin.js`, per-route rate limits (5 login attempts/min, 20 public orders/10min, 1000 general/15min)
-- **Database:** MySQL 8 with `mysql2/promise` connection pool — no ORM
-- **Images:** Multer (disk buffer) → Cloudinary SDK
+- **Middleware stack (order matters):** `helmet → requestLogger → cors → express.json → rate-limit → routes → error handler`
+- **Security:** JWT via `src/middleware/auth.js`, admin role check via `src/middleware/isAdmin.js`, per-route rate limits (5 login attempts/min, 20 upload/10min, 1000 general/15min)
+- **Database:** MySQL 8 with `mysql2/promise` connection pool — no ORM. Pool auto-reconnects on `PROTOCOL_CONNECTION_LOST`/`ECONNREFUSED` with exponential backoff (max 3 retries).
+- **Images:** Multer (memory buffer, 5MB limit, JPEG/PNG/WebP only) → `imageService.js` → Cloudinary SDK
+- **Logging:** Winston with `DailyRotateFile` — structured JSON in production, colored in dev. Files rotate daily and expire after 14 days (`logs/` directory, gitignored).
+- **Startup validation:** `validateEnv()` in `config/validateEnv.js` checks all required env vars at boot and calls `process.exit(1)` if any are missing.
+
+**New utility modules:**
+- `src/utils/response.js` — `success(res, data)`, `created(res, data)`, `error(res, msg, status)` helpers for consistent HTTP responses
+- `src/utils/sanitizeDbError.js` — maps MySQL error codes to user-friendly Spanish messages; passes SQLSTATE `45000` errors as-is (business errors from SPs)
+- `src/services/imageService.js` — `upload(buffer)` and `delete(publicId)` — decouples Cloudinary logic from route handlers
+- `src/middleware/requestLogger.js` — logs method, URL, status code, and response time via Winston on every request
 
 ### Database Conventions
 
@@ -82,4 +89,10 @@ No test runner is configured (no Jest/Vitest).
 
 **Admin analytics (Dashboard):** Uses `useQuery` from TanStack Query to batch ~8 API calls in parallel. Data is visualized with Recharts.
 
-**File upload flow:** Frontend sends `multipart/form-data` to `/api/upload` → Multer buffers in memory → Cloudinary SDK uploads → returns `secure_url` → that URL is saved in the products table.
+**File upload flow:** Frontend sends `multipart/form-data` to `/api/upload` → Multer validates (5MB, JPEG/PNG/WebP) → `imageService.upload(buffer)` → Cloudinary SDK → returns `{ url }` → URL saved in products table.
+
+**DB error handling:** All repositories catch MySQL errors and pass them through `sanitizeDbError()`. SQLSTATE `45000` (SP business errors) become HTTP 400 with the SP's message. Other MySQL errors are mapped to generic Spanish messages.
+
+**Carrito component structure:** The shopping cart UI lives in `src/components/tienda/carrito/` and is split into `CartHeader`, `CartItems`, `CartItem`, `CartTotal`, `CartCheckout`, and `carritoStyles.js`. The parent `Carrito.jsx` composes them.
+
+**Unit testing (backend):** Tests live in `backend/src/__tests__/`. Use Jest with `jest.mock()` to isolate the service layer from the database. Follow the AAA pattern (Arrange / Act / Assert). Run with `npm test` from `backend/`.

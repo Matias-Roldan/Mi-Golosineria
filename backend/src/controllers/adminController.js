@@ -1,7 +1,8 @@
 const adminService = require('../services/adminService');
+const { success } = require('../utils/response');
 
 const wrap = (fn) => async (req, res, next) => {
-  try { res.json(await fn(req)); } catch (err) { next(err); }
+  try { success(res, await fn(req)); } catch (err) { next(err); }
 };
 
 exports.getKpis = wrap(adminService.getKpis);

@@ -187,10 +187,12 @@ export default function Productos() {
         queryKey: ['productos-admin', pagina, busqueda, filtroCat],
         queryFn: () => getProductosAdmin({ page: pagina, limit: ITEMS_POR_PAGINA, search: busqueda, categoria: filtroCat })
           .then(({ data }) => data),
+        staleTime: 2 * 60 * 1000,
       },
       {
         queryKey: ['categorias-admin'],
         queryFn: () => getCategorias().then(({ data }) => data),
+        staleTime: Infinity,
       },
     ],
   });

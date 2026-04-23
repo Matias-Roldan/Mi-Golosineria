@@ -113,7 +113,9 @@ MySQL SP → SIGNAL SQLSTATE '45000' (error de negocio)
      ↓
 Repository → lanza err.sqlState === '45000'
      ↓
-Service → catch → throw new AppError(err.sqlMessage, 400)
+sanitizeDbError() → throw new AppError(err.message, 400)
+     ↓
+Service → propagate / catch errores desconocidos
      ↓
 Controller → next(err)
      ↓
@@ -131,7 +133,25 @@ class AppError extends Error {
 }
 ```
 
-**Beneficio:** el cliente recibe un mensaje claro. Los detalles del stack trace solo quedan en los logs del servidor.
+**Utilitario `sanitizeDbError`** — centraliza el mapeo de errores MySQL a mensajes de usuario:
+```js
+// utils/sanitizeDbError.js
+const MYSQL_ERROR_MESSAGES = {
+  1062: 'Ya existe un registro con esos datos.',
+  1452: 'El registro referenciado no existe.',
+  1451: 'No se puede eliminar porque tiene registros asociados.',
+  1406: 'El valor ingresado supera el límite permitido.',
+  1048: 'Falta un campo requerido.',
+};
+
+const sanitizeDbError = (err) => {
+  if (err.sqlState === '45000') throw new AppError(err.message, 400);
+  const mensaje = MYSQL_ERROR_MESSAGES[err.errno] ?? 'Error en la base de datos';
+  throw new AppError(mensaje, 500);
+};
+```
+
+**Beneficio:** el cliente recibe un mensaje claro. Los errores internos de MySQL nunca llegan al frontend.
 
 ---
 
@@ -146,7 +166,9 @@ Incoming HTTP Request
         ↓
    helmet()          → Agrega headers de seguridad (X-Frame-Options, CSP, etc.)
         ↓
-   cors()            → Valida que el origen sea permitido (localhost:5173)
+   requestLogger     → Loguea método, URL, statusCode y tiempo de respuesta (Winston)
+        ↓
+   cors()            → Valida que el origen sea permitido (ALLOWED_ORIGINS)
         ↓
    express.json()    → Parsea el body JSON (límite 2MB)
         ↓
@@ -154,7 +176,7 @@ Incoming HTTP Request
         ↓
    Routes            → Lógica de negocio
         ↓
-   Error Handler     → Captura cualquier error, devuelve JSON
+   Error Handler     → Captura cualquier error, devuelve JSON sin exponer stack
 ```
 
 **Middlewares de autenticación (por ruta):**
@@ -167,6 +189,19 @@ POST /api/admin/productos
    isAdmin.js        → Verifica que req.admin.rol sea 'admin' o 'superadmin'
         ↓
    productController.crearProducto()
+```
+
+**Middleware `requestLogger`** — registra cada request HTTP con su tiempo de respuesta:
+```js
+// middleware/requestLogger.js
+res.on('finish', () => {
+  logger.info('request', {
+    method: req.method,
+    url: req.originalUrl,
+    statusCode: res.statusCode,
+    responseTime: `${Date.now() - start}ms`,
+  });
+});
 ```
 
 ---
@@ -308,18 +343,34 @@ Usuario selecciona imagen (frontend)
         ↓
 POST /api/upload (multipart/form-data)
         ↓
-Multer (backend)  → buffer en memoria
+Multer (backend)  → buffer en memoria (5MB máx, solo JPEG/PNG/WebP)
         ↓
-Cloudinary SDK    → sube, transforma (800x800, compresión auto)
+imageService.upload()  → Stream → Cloudinary SDK
         ↓
-Returns secure_url (CDN HTTPS)
+Cloudinary      → transforma (800x800, compresión auto) → CDN HTTPS
+        ↓
+Returns { url, publicId }
         ↓
 Frontend guarda URL en el formulario del producto
         ↓
 POST /api/admin/productos → imagen_url en MySQL
 ```
 
-**Beneficio arquitectónico:** el servidor no almacena archivos en disco. Cloudinary es el servicio especializado en imágenes (CDN, optimización, backups). MySQL solo guarda la URL.
+**`imageService`** — desacopla la lógica de Cloudinary del route handler:
+```js
+// services/imageService.js
+async function upload(buffer, options = {}) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: 'mi-golosineria/productos', transformation: [...], ...options },
+      (err, result) => err ? reject(err) : resolve({ url: result.secure_url, publicId: result.public_id })
+    );
+    Readable.from(buffer).pipe(stream);
+  });
+}
+```
+
+**Beneficio arquitectónico:** el route de upload se limita a validar el archivo y delegar. Si se cambia de Cloudinary a S3, solo cambia `imageService.js`.
 
 ---
 
@@ -441,6 +492,183 @@ set({ carrito: [...get().carrito, { ...producto, cantidad: 1 }] });
 
 ---
 
+## 17. Observabilidad — Logging Estructurado
+
+**Problema:** en producción no hay terminal interactiva. Si ocurre un error, necesitás saber qué pasó, cuándo y con qué datos, sin reiniciar el servidor.
+
+### Logger Winston
+
+```js
+// config/logger.js
+const logger = createLogger({
+  level: isProduction ? 'info' : 'debug',
+  format: isProduction ? productionFormat : developmentFormat,
+  transports: [
+    new transports.Console(),
+    new transports.DailyRotateFile({ filename: 'logs/error-%DATE%.log', level: 'error', maxFiles: '14d' }),
+    new transports.DailyRotateFile({ filename: 'logs/combined-%DATE%.log', maxFiles: '14d' }),
+  ],
+});
+```
+
+| Entorno | Formato | Destino |
+|---------|---------|---------|
+| Desarrollo | `HH:mm:ss [level]: mensaje` con colores | Consola |
+| Producción | JSON estructurado | Consola + archivos rotativos |
+
+**Archivos rotativos:** se generan diariamente, se comprimen y se eliminan solos a los 14 días. El disco no se llena.
+
+**Uso en el código:**
+```js
+logger.info('Servidor en http://localhost:3001');
+logger.warn('MySQL reconectando...', { attempt: 1, maxRetries: 3 });
+logger.error('Error inesperado', { message: err.message, stack: err.stack });
+```
+
+---
+
+## 18. Resiliencia — Reconexión Automática del Pool MySQL
+
+**Problema:** si la base de datos se reinicia o pierde la conexión, el pool de MySQL falla y el servidor deja de funcionar.
+
+### Solución: reconexión con backoff exponencial
+
+```js
+// config/db.js
+const attachErrorHandler = (targetPool, attempt = 0) => {
+  targetPool.pool.on('error', async (err) => {
+    if (!RECONNECTABLE_CODES.has(err.code)) return;
+    if (attempt >= MAX_RETRIES) { process.exit(1); }
+
+    const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+    await sleep(delay);
+    pool = createPool();
+    attachErrorHandler(pool, attempt + 1);
+  });
+};
+```
+
+**Flujo:** error → espera 1s → reintento 1 → espera 2s → reintento 2 → espera 4s → reintento 3 → si falla, proceso termina (para que el orquestador lo reinicie).
+
+**Por qué backoff exponencial:** evita saturar el servidor de base de datos con reconexiones simultáneas.
+
+---
+
+## 19. Validación de Entorno al Arranque — Fail Fast
+
+**Principio:** es mejor fallar al iniciar que fallar en el momento de atender una request real.
+
+```js
+// config/validateEnv.js
+const VARIABLES_REQUERIDAS = ['JWT_SECRET', 'DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME',
+                               'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'];
+
+function validateEnv() {
+  const faltantes = VARIABLES_REQUERIDAS.filter((v) => process.env[v] === undefined);
+  if (faltantes.length > 0) {
+    console.error('ERROR: Faltan variables de entorno requeridas:');
+    faltantes.forEach((v) => console.error(`  - ${v}`));
+    process.exit(1);
+  }
+}
+```
+
+Se llama en la primera línea de `app.js`, antes de inicializar Express. Si falta una variable, el servidor no arranca y el error es claro.
+
+---
+
+## 20. Utilitarios de Respuesta HTTP — Consistencia
+
+**Problema:** sin un helper, cada controller tiene su propia forma de construir respuestas, lo que genera inconsistencia y código repetido.
+
+```js
+// utils/response.js
+const success = (res, data, status = 200) => res.status(status).json(data);
+const created = (res, data) => res.status(201).json(data);
+const error = (res, message, status = 400) => res.status(status).json({ error: message });
+```
+
+**Uso en controllers y routes:**
+```js
+// En vez de: res.status(200).json(data)
+success(res, data);
+
+// En vez de: res.status(201).json(data)
+created(res, data);
+
+// En vez de: res.status(400).json({ error: 'mensaje' })
+error(res, 'mensaje', 400);
+```
+
+**Beneficio:** si se quiere cambiar el formato de respuesta (ej: agregar `{ success: true, data: ... }`), se cambia en un solo lugar.
+
+---
+
+## 21. Testing — Pruebas Unitarias del Service Layer
+
+**Principio:** los services son el corazón de la lógica de negocio. Son la capa más crítica para testear porque no dependen de HTTP ni de la base de datos real.
+
+### Estructura de test con Jest
+
+```js
+// __tests__/pedidoService.test.js
+jest.mock('../repositories/pedidoRepository');
+
+describe('pedidoService.registrar', () => {
+  it('llama al repositorio y devuelve el id cuando los datos son válidos', async () => {
+    // Arrange
+    pedidoRepo.registrar.mockResolvedValue(42);
+    // Act
+    const resultado = await pedidoService.registrar(DATOS_VALIDOS);
+    // Assert
+    expect(resultado).toBe(42);
+  });
+
+  it('lanza AppError 400 cuando items está vacío', async () => {
+    await expect(pedidoService.registrar({ ...DATOS_VALIDOS, items: [] }))
+      .rejects.toMatchObject({ status: 400 });
+  });
+});
+```
+
+**Casos testeados:**
+- Caso feliz: datos válidos → llama repository → devuelve id
+- Items vacíos o nulos → AppError 400
+- Cantidad de item ≤ 0 → AppError 400
+- Teléfono con letras o muy corto → AppError 400
+- Error MySQL SQLSTATE 45000 → AppError 400 con mensaje del SP
+- Error desconocido → se propaga sin modificar
+
+**Mock del repository:** `jest.mock(...)` reemplaza el módulo real por un mock. El service se testea en aislamiento total — sin base de datos, sin red.
+
+---
+
+## 22. Componentización del Frontend — Carrito Refactorizado
+
+**Principio:** un componente con más de ~150 líneas suele mezclar responsabilidades. Dividirlo mejora la legibilidad y la reutilización.
+
+### Antes vs Después
+
+| Antes | Después |
+|-------|---------|
+| `Carrito.jsx` — un solo archivo con toda la UI y lógica | `carrito/` — carpeta con 5 componentes + estilos |
+
+### Estructura del módulo `carrito/`
+
+```
+frontend/src/components/tienda/carrito/
+├── CartHeader.jsx      → Encabezado con título y botón de cerrar
+├── CartItems.jsx       → Lista de ítems del carrito
+├── CartItem.jsx        → Un ítem individual (nombre, precio, controles de cantidad)
+├── CartCheckout.jsx    → Formulario y botón de confirmar pedido
+├── CartTotal.jsx       → Resumen del total a pagar
+└── carritoStyles.js    → Objeto de estilos compartidos entre los componentes
+```
+
+**Beneficio:** cada componente puede leerse y modificarse independientemente. Si cambia la lógica de checkout, no hay que tocar los ítems ni el header.
+
+---
+
 ## Glosario Rápido
 
 | Término | Definición | Ejemplo en el proyecto |
@@ -455,3 +683,8 @@ set({ carrito: [...get().carrito, { ...producto, cantidad: 1 }] });
 | **Inmutabilidad** | No mutar estado, crear copias | `set({ carrito: [...carrito, item] })` |
 | **Error Boundary** | Captura y controla la propagación de errores | `AppError` + global handler |
 | **CDN** | Content Delivery Network | Cloudinary para imágenes |
+| **Logging estructurado** | Logs en formato JSON con metadatos | Winston + `DailyRotateFile` |
+| **Backoff exponencial** | Espera que crece en cada reintento (1s, 2s, 4s...) | Reconexión MySQL pool |
+| **Fail Fast** | Fallar al arrancar, no en producción | `validateEnv()` en `app.js` |
+| **Mock** | Reemplazo de dependencia real en tests | `jest.mock('../repositories/pedidoRepository')` |
+| **Componentización** | Dividir UI compleja en piezas pequeñas | Carrito → 5 componentes |
