@@ -19,5 +19,6 @@ router.get('/analisis/elasticidad/:producto_id',  auth, ctrl.getElasticidadPreci
 router.get('/analisis/cross-selling',             auth, ctrl.getCrossSelling);
 router.get('/analisis/punto-equilibrio',          auth, ctrl.getPuntoEquilibrio);
 router.get('/analisis/estacionalidad',            auth, ctrl.getEstacionalidadCategorias);
+router.get('/analisis/estado-resultados',         auth, ctrl.getEstadoResultados);
 
 module.exports = router;

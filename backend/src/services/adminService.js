@@ -11,6 +11,7 @@ const getRFM = () => adminRepo.getRFM();
 const getSaludStock = () => adminRepo.getSaludStock();
 const getCrossSelling = () => adminRepo.getCrossSelling();
 const getEstacionalidad = () => adminRepo.getEstacionalidad();
+const getEstadoResultados = () => adminRepo.getEstadoResultados();
 
 const getElasticidadPrecio = (productoId) => {
   if (!productoId || isNaN(productoId))
@@ -28,4 +29,5 @@ module.exports = {
   getKpis, getVentasDiarias, getTopProductos, getHeatmapHorarios,
   getCategorias, getPareto, getRFM, getSaludStock,
   getElasticidadPrecio, getCrossSelling, getPuntoEquilibrio, getEstacionalidad,
+  getEstadoResultados,
 };

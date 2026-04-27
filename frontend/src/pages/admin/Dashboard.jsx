@@ -9,6 +9,7 @@ import { useSidebar } from '../../stores/useSidebarStore';
 import {
   getKpis, getVentasDiarias, getTopProductos, getHeatmap,
   getAnalisisPareto, getAnalisisRFM, getSaludStock, getCrossSelling,
+  getEstadoResultados,
 } from '../../api/adminApi';
 
 // ─── Animation variant ────────────────────────────────────────────────
@@ -69,26 +70,29 @@ export default function Dashboard() {
       Promise.all([
         getKpis(), getVentasDiarias(), getTopProductos(),
         getHeatmap(), getAnalisisPareto(), getAnalisisRFM(), getSaludStock(), getCrossSelling(),
-      ]).then(([kpisRes, ventasRes, topRes, heatRes, paretoRes, rfmRes, stockRes, crossRes]) => ({
-        kpis:        kpisRes.data,
-        ventas:      ventasRes.data,
-        topProductos: topRes.data,
-        heatmap:     heatRes.data ?? [],
-        pareto:      paretoRes.data ?? [],
-        rfm:         rfmRes.data ?? [],
-        stock:       stockRes.data ?? [],
-        crossSelling: crossRes.data ?? [],
+        getEstadoResultados(),
+      ]).then(([kpisRes, ventasRes, topRes, heatRes, paretoRes, rfmRes, stockRes, crossRes, erRes]) => ({
+        kpis:             kpisRes.data,
+        ventas:           ventasRes.data,
+        topProductos:     topRes.data,
+        heatmap:          heatRes.data ?? [],
+        pareto:           paretoRes.data ?? [],
+        rfm:              rfmRes.data ?? [],
+        stock:            stockRes.data ?? [],
+        crossSelling:     crossRes.data ?? [],
+        estadoResultados: erRes.data ?? null,
       })),
   });
 
-  const kpis         = data?.kpis         ?? null;
-  const ventas       = data?.ventas       ?? [];
-  const topProductos = data?.topProductos ?? [];
-  const heatmap      = data?.heatmap      ?? [];
-  const pareto       = data?.pareto       ?? [];
-  const rfm          = data?.rfm          ?? [];
-  const stock        = data?.stock        ?? [];
-  const crossSelling = data?.crossSelling ?? [];
+  const kpis             = data?.kpis             ?? null;
+  const ventas           = data?.ventas           ?? [];
+  const topProductos     = data?.topProductos     ?? [];
+  const heatmap          = data?.heatmap          ?? [];
+  const pareto           = data?.pareto           ?? [];
+  const rfm              = data?.rfm              ?? [];
+  const stock            = data?.stock            ?? [];
+  const crossSelling     = data?.crossSelling     ?? [];
+  const estadoResultados = data?.estadoResultados ?? null;
 
   const formatPeso = (n) => {
     const num = parseFloat(n);
@@ -484,6 +488,46 @@ export default function Dashboard() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── Estado de Resultados ── */}
+            {estadoResultados && (
+              <motion.div style={D.cardFull} custom={14} initial="hidden" animate="visible" variants={fadeUp}>
+                <div style={D.cardHeader}>
+                  <div>
+                    <h2 style={D.cardTitle}>Estado de Resultados</h2>
+                    <p style={D.cardSub}>Resumen financiero — pedidos activos (excluye cancelados y devueltos)</p>
+                  </div>
+                  <div style={{ background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.25)', borderRadius: '12px', padding: '0.6rem 1.1rem', textAlign: 'center', flexShrink: 0 }}>
+                    <div style={{ fontSize: '0.58rem', color: '#8b8b9e', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '3px' }}>
+                      Margen bruto
+                    </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#a855f7', lineHeight: 1 }}>
+                      {parseFloat(estadoResultados.margen_bruto_pct ?? 0).toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem' }}>
+                  {[
+                    { label: 'Ventas brutas',    value: formatPeso(estadoResultados.ventas_brutas),         color: '#10b981', icon: '📈', prefix: '' },
+                    { label: 'Descuentos',        value: formatPeso(estadoResultados.descuentos_aplicados),  color: '#f59e0b', icon: '🏷️', prefix: '−' },
+                    { label: 'Ventas netas',      value: formatPeso(estadoResultados.ventas_netas),          color: '#3b82f6', icon: '💳', prefix: '' },
+                    { label: 'Costo de ventas',   value: formatPeso(estadoResultados.costo_de_ventas),       color: '#ef4444', icon: '📦', prefix: '−' },
+                    { label: 'Utilidad bruta',    value: formatPeso(estadoResultados.utilidad_bruta),        color: '#a855f7', icon: '✨', prefix: '' },
+                  ].map((item) => (
+                    <div key={item.label} style={{ background: '#0f0f13', borderRadius: '12px', padding: '1rem 1.1rem', border: `1px solid ${item.color}22` }}>
+                      <div style={{ fontSize: '0.6rem', color: '#8b8b9e', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.5rem' }}>
+                        {item.icon}&nbsp;{item.label}
+                      </div>
+                      <div style={{ fontSize: '1rem', fontWeight: '900', color: item.color, wordBreak: 'break-word' }}>
+                        {item.prefix && <span style={{ opacity: 0.7, marginRight: '2px' }}>{item.prefix}</span>}
+                        {item.value}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </motion.div>
             )}

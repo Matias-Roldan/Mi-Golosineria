@@ -10,3 +10,4 @@ export const getAnalisisRFM = () => api.get('/admin/analisis/rfm');
 export const getSaludStock = () => api.get('/admin/analisis/stock');
 export const getCrossSelling = () => api.get('/admin/analisis/cross-selling');
 export const getEstacionalidad = () => api.get('/admin/analisis/estacionalidad');
+export const getEstadoResultados = () => api.get('/admin/analisis/estado-resultados');

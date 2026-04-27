@@ -18,3 +18,4 @@ exports.getEstacionalidadCategorias = wrap(adminService.getEstacionalidad);
 
 exports.getElasticidadPrecio = wrap((req) => adminService.getElasticidadPrecio(req.params.producto_id));
 exports.getPuntoEquilibrio = wrap((req) => adminService.getPuntoEquilibrio(req.query.costos_fijos));
+exports.getEstadoResultados = wrap(adminService.getEstadoResultados);

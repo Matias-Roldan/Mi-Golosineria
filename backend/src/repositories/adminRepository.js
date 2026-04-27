@@ -88,8 +88,16 @@ const getEstacionalidad = async () => {
   } catch (err) { logger.error('adminRepository.getEstacionalidad', { message: err.message }); sanitizeDbError(err); }
 };
 
+const getEstadoResultados = async () => {
+  try {
+    const [rows] = await pool.query('CALL sp_estado_resultados()');
+    return rows[0][0];
+  } catch (err) { logger.error('adminRepository.getEstadoResultados', { message: err.message }); sanitizeDbError(err); }
+};
+
 module.exports = {
   getKpis, getVentasDiarias, getTopProductos, getHeatmapHorarios,
   getCategorias, getPareto, getRFM, getSaludStock,
   getElasticidadPrecio, getCrossSelling, getPuntoEquilibrio, getEstacionalidad,
+  getEstadoResultados,
 };
